@@ -20,7 +20,9 @@ data class MessUiState(
     val crowdMetrics: CrowdMetrics = CrowdMetrics(),
     val broadcasts: List<Broadcast> = emptyList(),
     val toastMessage: String? = null,
-    val greenPoints: Int = 0
+    val greenPoints: Int = 0,
+    val isHostelTeamTakeover: Boolean = false,
+    val ratedMealToday: Boolean = false
 )
 
 @HiltViewModel
@@ -29,13 +31,14 @@ class MessViewModel @Inject constructor(
     private val menuRepository: MenuRepository,
     private val mealResponseRepository: MealResponseRepository,
     private val crowdRepository: CrowdRepository,
-    private val broadcastRepository: BroadcastRepository
+    private val broadcastRepository: BroadcastRepository,
+    val advancedRepository: AdvancedFeaturesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MessUiState())
     val uiState: StateFlow<MessUiState> = _uiState.asStateFlow()
 
-    private val todayDate: String = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+    val todayDate: String = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
 
     init {
         loadUserProfile()
@@ -43,6 +46,7 @@ class MessViewModel @Inject constructor(
         observeMealResponses()
         observeCrowdMetrics()
         observeBroadcasts()
+        observeHostelTakeover()
     }
 
     private fun loadUserProfile() {
@@ -106,8 +110,46 @@ class MessViewModel @Inject constructor(
         }
     }
 
+    private fun observeHostelTakeover() {
+        viewModelScope.launch {
+            advancedRepository.observeHostelTeamTakeover(todayDate).collect { isTakeover ->
+                _uiState.update { it.copy(isHostelTeamTakeover = isTakeover) }
+            }
+        }
+    }
+
     fun selectMealType(mealType: MealType) {
         _uiState.update { it.copy(selectedMealType = mealType) }
+    }
+
+    fun submitMealRating(rating: String, tags: List<String>, comment: String) {
+        val vid = _uiState.value.user?.vid ?: "STUDENT"
+        viewModelScope.launch {
+            val feedback = MealFeedback(
+                vid = vid,
+                date = todayDate,
+                mealType = _uiState.value.selectedMealType.name,
+                rating = rating,
+                complaintTags = tags,
+                comments = comment
+            )
+            val result = advancedRepository.submitMealFeedback(feedback)
+            result.fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(
+                            ratedMealToday = true,
+                            toastMessage = if (rating == "UNHAPPY")
+                                "Feedback logged. If more students are unhappy, hostel team oversight will trigger!"
+                            else "Thank you for rating today's meal! 😋"
+                        )
+                    }
+                },
+                onFailure = { err ->
+                    _uiState.update { it.copy(toastMessage = "Failed: ${err.message}") }
+                }
+            )
+        }
     }
 
     /**

@@ -96,6 +96,79 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // ── Plate Waste Logs ──────────────────────────────────────────────────
+    // Students can record plate scans; admins can view and audit
+    match /plate_waste_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // ── Sick Meal Requests & Health Profile ───────────────────────────────
+    // Students can create sick meal requests; admins manage preparation & delivery
+    match /sick_meal_requests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.vid == getUserVid());
+    }
+
+    // ── Special Lunch Facility ────────────────────────────────────────────
+    // Everyone can view special lunch offerings; students can book; admins manage
+    match /special_events/{eventId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+
+      match /bookings/{bookingId} {
+        allow read: if isAuthenticated();
+        allow create, update: if isAuthenticated();
+        allow delete: if isAdmin();
+      }
+    }
+
+    // ── Mess QR Gate Check-ins ────────────────────────────────────────────
+    // Check-in events for automated crowd counting and entry verification
+    match /mess_checkins/{checkinId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // ── Password Reset Requests ───────────────────────────────────────────
+    // Students can submit reset requests prior to sign-in; admins resolve them
+    match /password_reset_requests/{requestId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    // ── Meal Feedback & Hostel Team Takeover ───────────────────────────────
+    // Students submit ratings; system and admins aggregate satisfaction
+    match /meal_feedback/{feedbackId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // ── Mess Operations & Hostel Team Takeover Status ──────────────────────
+    match /mess_operations_status/{statusId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthenticated();
+    }
+
+    // ── Long Holiday & Mess Rebates (1-day advance) ─────────────────────────
+    match /holiday_rebates/{rebateId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // ── Technical Complaint Box ───────────────────────────────────────────
+    match /technical_complaints/{ticketId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.vid == getUserVid());
+    }
+
     // ── Deny all other paths ──────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

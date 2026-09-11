@@ -70,36 +70,36 @@ const RANDOM_DISH_POOL = {
     { name: "Delhi Special Chole Bhature", calories: 430, allergens: ["Gluten"], tags: ["Chef Special", "Weekend"] },
     { name: "Mumbai Butter Pav Bhaji", calories: 360, allergens: ["Gluten", "Dairy"], tags: ["Hot", "Savory"] },
     { name: "Onion Tomato Masala Uttapam", calories: 280, allergens: [], tags: ["South Indian"] },
-    { name: "Sprouted Moong & Boiled Kala Chana", calories: 140, allergens: [], tags: ["High Protein", "Fitness"] },
-    { name: "Boiled Eggs with Cracked Pepper", calories: 140, allergens: ["Egg"], tags: ["High Protein"] },
-    { name: "Cornflakes with Warm Milk & Bananas", calories: 210, allergens: ["Dairy"], tags: ["Quick & Healthy"] },
+    { name: "Sprouted Moong & Boiled Kala Chana", calories: 140, allergens: [], tags: ["High Protein", "Fitness", "Pure Veg"] },
+    { name: "Paneer Bhurji with Desi Ghee & Fresh Herbs", calories: 260, allergens: ["Dairy"], tags: ["High Protein", "Pure Veg"] },
+    { name: "Cornflakes with Warm Milk & Bananas", calories: 210, allergens: ["Dairy"], tags: ["Quick & Healthy", "Pure Veg"] },
     { name: "Cutting Masala Chai & Filter Coffee", calories: 85, allergens: ["Dairy"], tags: ["Beverage"] }
   ],
   LUNCH: [
-    { name: "Kashmiri Rajma Masala & Steamed Rice", calories: 380, allergens: [], tags: ["North Indian", "High Protein"] },
-    { name: "Dhaba Style Dal Tadka (Double Tadka)", calories: 210, allergens: ["Dairy"], tags: ["Vegetarian"] },
-    { name: "Paneer Butter Masala (Makhani Gravy)", calories: 320, allergens: ["Dairy"], tags: ["Royal", "Vegetarian"] },
-    { name: "Punjabi Kadhi Pakora with Basmati Rice", calories: 360, allergens: ["Dairy"], tags: ["Traditional"] },
-    { name: "Hyderabadi Dum Biryani with Burani Raita", calories: 420, allergens: ["Dairy"], tags: ["Chef Special", "Aromatic"] },
-    { name: "Amritsari Pindi Chana with Butter Naan", calories: 390, allergens: ["Gluten", "Dairy"], tags: ["Punjabi Feast"] },
-    { name: "Crispy Bhindi Kurkuri & Seasonal Sabzi", calories: 150, allergens: [], tags: ["Vegan"] },
-    { name: "Fresh Tawa Roti with Desi Ghee", calories: 140, allergens: ["Gluten"], tags: ["Staple"] },
-    { name: "Mix Vegetable Pulao & Cucumber Salad", calories: 210, allergens: [], tags: ["Vegan"] },
-    { name: "Boondi Raita / Mint Garlic Dip", calories: 85, allergens: ["Dairy"], tags: ["Cooling"] }
+    { name: "Kashmiri Rajma Masala & Steamed Rice", calories: 380, allergens: [], tags: ["North Indian", "High Protein", "Pure Veg"] },
+    { name: "Dhaba Style Dal Tadka (Double Tadka)", calories: 210, allergens: ["Dairy"], tags: ["Vegetarian", "Pure Veg"] },
+    { name: "Paneer Butter Masala (Makhani Gravy)", calories: 320, allergens: ["Dairy"], tags: ["Royal", "Vegetarian", "Pure Veg"] },
+    { name: "Punjabi Kadhi Pakora with Basmati Rice", calories: 360, allergens: ["Dairy"], tags: ["Traditional", "Pure Veg"] },
+    { name: "Hyderabadi Veg Dum Biryani with Burani Raita", calories: 420, allergens: ["Dairy"], tags: ["Chef Special", "Aromatic", "Pure Veg"] },
+    { name: "Amritsari Pindi Chana with Butter Naan", calories: 390, allergens: ["Gluten", "Dairy"], tags: ["Punjabi Feast", "Pure Veg"] },
+    { name: "Crispy Bhindi Kurkuri & Seasonal Sabzi", calories: 150, allergens: [], tags: ["Vegan", "Pure Veg"] },
+    { name: "Fresh Tawa Roti with Desi Ghee", calories: 140, allergens: ["Gluten"], tags: ["Staple", "Pure Veg"] },
+    { name: "Mix Vegetable Pulao & Cucumber Salad", calories: 210, allergens: [], tags: ["Vegan", "Pure Veg"] },
+    { name: "Boondi Raita / Mint Garlic Dip", calories: 85, allergens: ["Dairy"], tags: ["Cooling", "Pure Veg"] }
   ],
   SNACKS: [
-    { name: "Crispy Vegetable Samosa (2 pcs)", calories: 260, allergens: ["Gluten"], tags: ["Crispy", "Street Style"] },
-    { name: "Bombay Bhel Puri with Tangy Tamarind", calories: 190, allergens: ["Nuts"], tags: ["Tangy", "Light"] },
-    { name: "Stuffed Paneer Bread Pakora", calories: 280, allergens: ["Gluten", "Dairy"], tags: ["Monsoon Special"] },
-    { name: "Crispy Vegetable Cutlet with Dip", calories: 220, allergens: ["Gluten"], tags: ["Vegan", "Crunchy"] },
-    { name: "Mumbai Batata Vada with Fried Chilli", calories: 240, allergens: ["Gluten"], tags: ["Spicy"] },
-    { name: "White Sauce Cheesy Vegetable Pasta", calories: 290, allergens: ["Gluten", "Dairy"], tags: ["Italian"] },
-    { name: "Crispy Peri-Peri French Fries", calories: 230, allergens: [], tags: ["Vegan"] },
+    { name: "Crispy Vegetable Samosa (2 pcs)", calories: 260, allergens: ["Gluten"], tags: ["Crispy", "Street Style", "Pure Veg"] },
+    { name: "Bombay Bhel Puri with Tangy Tamarind", calories: 190, allergens: ["Nuts"], tags: ["Tangy", "Light", "Pure Veg"] },
+    { name: "Stuffed Paneer Bread Pakora", calories: 280, allergens: ["Gluten", "Dairy"], tags: ["Monsoon Special", "Pure Veg"] },
+    { name: "Crispy Vegetable Cutlet with Dip", calories: 220, allergens: ["Gluten"], tags: ["Vegan", "Crunchy", "Pure Veg"] },
+    { name: "Mumbai Batata Vada with Fried Chilli", calories: 240, allergens: ["Gluten"], tags: ["Spicy", "Pure Veg"] },
+    { name: "White Sauce Cheesy Vegetable Pasta", calories: 290, allergens: ["Gluten", "Dairy"], tags: ["Italian", "Pure Veg"] },
+    { name: "Crispy Peri-Peri French Fries", calories: 230, allergens: [], tags: ["Vegan", "Pure Veg"] },
     { name: "Adrak-Elaichi Cutting Chai / Cold Coffee", calories: 95, allergens: ["Dairy"], tags: ["Beverage"] }
   ],
   DINNER: [
-    { name: "Slow-Cooked Dal Makhani (Dal Bukhara)", calories: 290, allergens: ["Dairy"], tags: ["Rich", "Slow Cooked"] },
-    { name: "Paneer Lababdar / Butter Chicken", calories: 340, allergens: ["Dairy", "Nuts"], tags: ["High Protein", "Chef Special"] },
+    { name: "Slow-Cooked Dal Makhani (Dal Bukhara)", calories: 290, allergens: ["Dairy"], tags: ["Rich", "Slow Cooked", "Pure Veg"] },
+    { name: "Shahi Paneer Lababdar in Rich Cashew Gravy", calories: 340, allergens: ["Dairy", "Nuts"], tags: ["High Protein", "Chef Special", "Pure Veg"] },
     { name: "Tandoori Soya Chaap Curry", calories: 280, allergens: ["Soy", "Dairy"], tags: ["High Protein"] },
     { name: "Palak Paneer with Garlic Tadka", calories: 270, allergens: ["Dairy"], tags: ["Healthy", "Iron Rich"] },
     { name: "Matar Paneer with Jeera Rice", calories: 320, allergens: ["Dairy"], tags: ["Homestyle"] },
@@ -201,7 +201,11 @@ export default function MessTimetable({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 border border-emerald-200 px-3.5 py-2.5 text-xs font-black text-emerald-800 shadow-sm">
+            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            🌱 100% Pure Vegetarian
+          </div>
           <button
             onClick={generateRandomTimetable}
             disabled={isGenerating}

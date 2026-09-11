@@ -21,7 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -34,18 +34,17 @@ import com.messwise.os.ui.components.MealCard
 
 /**
  * StudentMessScreen — The core student interface for MessWise OS.
- *
- * Features:
- * 1. Tabbed meal schedule (Breakfast, Lunch, Snacks, Dinner)
- * 2. Dynamic food cards with nutritional tags & allergens
- * 3. 1-tap Skip/Eat toggle with 3-hour cutoff
- * 4. Live crowd/queue meter with color-coded indicators
- * 5. Green Points counter
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudentMessScreen(
     onNavigateToTickets: () -> Unit,
+    onNavigateToPlateScanner: () -> Unit,
+    onNavigateToEntryQr: () -> Unit,
+    onNavigateToSickMeal: () -> Unit,
+    onNavigateToSpecialLunch: () -> Unit,
+    onNavigateToHolidayRebate: () -> Unit,
+    onNavigateToTechnicalComplaint: () -> Unit,
     onLogout: () -> Unit,
     viewModel: MessViewModel = hiltViewModel()
 ) {
@@ -66,12 +65,26 @@ fun StudentMessScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(
-                            "MessWise OS",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Black
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "MessWise OS",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Black
+                                )
                             )
-                        )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFFD1FAE5)
+                            ) {
+                                Text(
+                                    "🌱 100% PURE VEG",
+                                    color = Color(0xFF065F46),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
                         Text(
                             "Hi, ${uiState.user?.name ?: "Student"} 👋",
                             style = MaterialTheme.typography.bodySmall,
@@ -82,6 +95,12 @@ fun StudentMessScreen(
                 actions = {
                     GreenPointsBadge(points = uiState.greenPoints)
                     Spacer(modifier = Modifier.width(4.dp))
+                    IconButton(onClick = onNavigateToTechnicalComplaint) {
+                        Icon(
+                            Icons.Outlined.HeadsetMic,
+                            contentDescription = "IT Support"
+                        )
+                    }
                     IconButton(onClick = onNavigateToTickets) {
                         Icon(
                             Icons.Outlined.Build,
@@ -121,14 +140,58 @@ fun StudentMessScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // ── Section 0: Live Campus & Warden Broadcasts ────────────────
+            // ── Section 0A: Democratic Hostel Team Takeover Banner ─────────
+            if (uiState.isHostelTeamTakeover) {
+                item {
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFEF4444)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("🚨", fontSize = 28.sp)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    "Democratic Oversight Active!",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Black),
+                                    color = Color(0xFF991B1B)
+                                )
+                                Text(
+                                    "Quality threshold breached (>40% unhappy ratings). Today's mess service and preparation standards are officially supervised by the Hostel Student Team.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFFB91C1C)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Section 0B: Live Campus & Warden Broadcasts ───────────────
             if (uiState.broadcasts.isNotEmpty()) {
                 item {
                     BroadcastBanner(broadcasts = uiState.broadcasts)
                 }
             }
 
-            // ── Section 1: Meal Type Tabs ─────────────────────────────────
+            // ── Section 1: Quick Feature Action Hub ───────────────────────
+            item {
+                QuickActionsHub(
+                    onPlateScanner = onNavigateToPlateScanner,
+                    onEntryQr = onNavigateToEntryQr,
+                    onSickMeal = onNavigateToSickMeal,
+                    onSpecialLunch = onNavigateToSpecialLunch,
+                    onHolidayRebate = onNavigateToHolidayRebate,
+                    onTechComplaint = onNavigateToTechnicalComplaint
+                )
+            }
+
+            // ── Section 2: Meal Type Tabs ─────────────────────────────────
             item {
                 MealTypeTabs(
                     selectedMealType = uiState.selectedMealType,
@@ -136,7 +199,7 @@ fun StudentMessScreen(
                 )
             }
 
-            // ── Section 2: Current Meal Menu Cards ────────────────────────
+            // ── Section 3: Current Meal Menu Cards ────────────────────────
             item {
                 val currentMenu = uiState.menus.find {
                     it.mealType == uiState.selectedMealType
@@ -222,7 +285,7 @@ fun StudentMessScreen(
                 }
             }
 
-            // ── Section 3: 1-Tap Skip/Eat Toggle ─────────────────────────
+            // ── Section 4: 1-Tap Skip/Eat Toggle ─────────────────────────
             item {
                 SkipEatToggleSection(
                     mealStatuses = uiState.mealStatuses,
@@ -230,18 +293,280 @@ fun StudentMessScreen(
                 )
             }
 
-            // ── Section 4: Live Crowd Meter ───────────────────────────────
+            // ── Section 5: Rate Today's Meal & Quality Feedback ──────────
+            item {
+                MealQualityFeedbackCard(
+                    mealName = uiState.selectedMealType.displayName,
+                    alreadyRated = uiState.ratedMealToday,
+                    onSubmitRating = { rating, tags, comment ->
+                        viewModel.submitMealRating(rating, tags, comment)
+                    }
+                )
+            }
+
+            // ── Section 6: Live Crowd Meter (With Dynamic Crowdy State) ──
             item {
                 CrowdMeter(crowdMetrics = uiState.crowdMetrics)
             }
 
-            // ── Section 5: Green Points Info Card ─────────────────────────
+            // ── Section 7: Green Points Info Card ─────────────────────────
             item {
-                GreenPointsInfoCard(points = uiState.greenPoints)
+                GreenPointsInfoCard(
+                    points = uiState.greenPoints,
+                    onOpenScanner = onNavigateToPlateScanner
+                )
             }
 
             // Bottom spacing
             item { Spacer(modifier = Modifier.height(24.dp)) }
+        }
+    }
+}
+
+// ── Quick Actions Hub ──────────────────────────────────────────────────────
+
+@Composable
+private fun QuickActionsHub(
+    onPlateScanner: () -> Unit,
+    onEntryQr: () -> Unit,
+    onSickMeal: () -> Unit,
+    onSpecialLunch: () -> Unit,
+    onHolidayRebate: () -> Unit,
+    onTechComplaint: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                "Campus Dining Facilities",
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                item {
+                    ActionChipItem(
+                        icon = "📸",
+                        title = "Plate Scanner",
+                        subtitle = "± Green Coins",
+                        onClick = onPlateScanner,
+                        bgColor = Color(0xFFECFDF5)
+                    )
+                }
+                item {
+                    ActionChipItem(
+                        icon = "🎟️",
+                        title = "QR Entry Pass",
+                        subtitle = "Gate Verification",
+                        onClick = onEntryQr,
+                        bgColor = Color(0xFFEFF6FF)
+                    )
+                }
+                item {
+                    ActionChipItem(
+                        icon = "🥣",
+                        title = "Sick Meal",
+                        subtitle = "Khichdi & Care",
+                        onClick = onSickMeal,
+                        bgColor = Color(0xFFFFF1F2)
+                    )
+                }
+                item {
+                    ActionChipItem(
+                        icon = "🌟",
+                        title = "Special Lunch",
+                        subtitle = "Feast Booking",
+                        onClick = onSpecialLunch,
+                        bgColor = Color(0xFFFFFBEB)
+                    )
+                }
+                item {
+                    ActionChipItem(
+                        icon = "🏖️",
+                        title = "Holiday Leave",
+                        subtitle = "1-Day Advance",
+                        onClick = onHolidayRebate,
+                        bgColor = Color(0xFFF0FDF4)
+                    )
+                }
+                item {
+                    ActionChipItem(
+                        icon = "💻",
+                        title = "IT Support",
+                        subtitle = "Tech Complaint",
+                        onClick = onTechComplaint,
+                        bgColor = Color(0xFFF8FAFC)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionChipItem(
+    icon: String,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    bgColor: Color
+) {
+    Surface(
+        modifier = Modifier
+            .width(130.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        color = bgColor
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(icon, fontSize = 24.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                title,
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black),
+                color = Color(0xFF0F172A)
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFF64748B)
+            )
+        }
+    }
+}
+
+// ── Rate Today's Food / Quality Feedback Card ──────────────────────────────
+
+@Composable
+private fun MealQualityFeedbackCard(
+    mealName: String,
+    alreadyRated: Boolean,
+    onSubmitRating: (String, List<String>, String) -> Unit
+) {
+    var selectedRating by remember { mutableStateOf<String?>(null) }
+    var selectedTag by remember { mutableStateOf<String?>(null) }
+    val unhappyTags = listOf("Cold food", "Too oily / spicy", "Bad taste", "Finished early")
+
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("⭐", fontSize = 20.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "Rate $mealName Food Quality",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            }
+
+            Text(
+                text = "If more students are unhappy (>40%), mess service is handed over to the Hostel Student Oversight Team.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)
+            )
+
+            if (alreadyRated) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFECFDF5),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "✅ Thanks for voting! Your feedback helps uphold campus dining standards.",
+                        color = Color(0xFF065F46),
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(14.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    listOf(
+                        Triple("LOVED", "😋", "Loved It"),
+                        Triple("AVERAGE", "😐", "Average"),
+                        Triple("UNHAPPY", "😡", "Unhappy")
+                    ).forEach { (ratingKey, emoji, label) ->
+                        val isSelected = selectedRating == ratingKey
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable { selectedRating = ratingKey },
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isSelected) {
+                                if (ratingKey == "UNHAPPY") Color(0xFFFEE2E2) else Color(0xFFD1FAE5)
+                            } else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(emoji, fontSize = 24.sp)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    label,
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = if (isSelected) {
+                                        if (ratingKey == "UNHAPPY") Color(0xFF991B1B) else Color(0xFF065F46)
+                                    } else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (selectedRating == "UNHAPPY") {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "What went wrong?",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = Color(0xFF991B1B)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(unhappyTags) { tag ->
+                            FilterChip(
+                                selected = selectedTag == tag,
+                                onClick = { selectedTag = tag },
+                                label = { Text(tag, fontSize = 11.sp) },
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (selectedRating != null) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Button(
+                        onClick = {
+                            val tags = if (selectedTag != null) listOf(selectedTag!!) else emptyList()
+                            onSubmitRating(selectedRating!!, tags, "")
+                        },
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (selectedRating == "UNHAPPY") Color(0xFFDC2626) else MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text("Submit Meal Rating", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
     }
 }
@@ -384,7 +709,10 @@ private fun SkipEatToggleSection(
 // ── Green Points Info Card ─────────────────────────────────────────────────
 
 @Composable
-private fun GreenPointsInfoCard(points: Int) {
+private fun GreenPointsInfoCard(
+    points: Int,
+    onOpenScanner: () -> Unit
+) {
     Card(
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier.fillMaxWidth()
@@ -403,38 +731,53 @@ private fun GreenPointsInfoCard(points: Int) {
                 )
                 .padding(20.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "🌿 Your Green Points",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = Color.White
-                    )
-                    Text(
-                        text = "Help reduce campus food wastage",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "🌿 Your Green Points",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Scan clean plates at disposal to earn coins",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color.White.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = "$points pts",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Black
+                            ),
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                        )
+                    }
                 }
 
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color.White.copy(alpha = 0.15f)
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Button(
+                    onClick = onOpenScanner,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
                 ) {
-                    Text(
-                        text = "$points pts",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Black
-                        ),
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
-                    )
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = Color.White)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("📸 Open Plate Waste Scanner", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         }

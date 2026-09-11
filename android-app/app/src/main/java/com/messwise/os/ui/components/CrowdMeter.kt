@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.messwise.os.data.model.CrowdLevel
 import com.messwise.os.data.model.CrowdMetrics
 
@@ -170,6 +171,28 @@ fun CrowdMeter(
                                     color = textColor
                                 )
                             }
+                        }
+                    }
+                }
+
+                if (crowdMetrics.currentLevel == CrowdLevel.PEAK) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF991B1B),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Text("⚠️", fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "MESS IS CROWDY: High occupancy detected at gate counters. Expect queue delays!",
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                            )
                         }
                     }
                 }
