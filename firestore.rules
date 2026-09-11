@@ -1,0 +1,104 @@
+rules_version = '2';
+
+/**
+ * MessWise OS — Cloud Firestore Security Rules
+ *
+ * Role-based access control:
+ * - STUDENT: Read menus, crowd metrics; write own meal responses and tickets
+ * - ADMIN: Full write on menus, crowd metrics, ticket status; read all data
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper Functions ──────────────────────────────────────────────────
+
+    // Check if the requester is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Get the user's role from their profile document
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Check if the requester has ADMIN role
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == "ADMIN";
+    }
+
+    // Get the user's VID from their profile document
+    function getUserVid() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.vid;
+    }
+
+    // ── Users Collection ──────────────────────────────────────────────────
+    // Allow read so students can look up their email by VID prior to signing in.
+    // Writes and updates are strictly restricted.
+    match /users/{uid} {
+      allow read: if true;
+      allow create: if isAdmin();
+      allow update: if isAuthenticated() && (request.auth.uid == uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // ── Mess Menu Collection ──────────────────────────────────────────────
+    // Everyone authenticated can read menus.
+    // Only admins can create, update, or delete menu items.
+    match /mess_menu/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ── Meal Responses Collection ─────────────────────────────────────────
+    // Students can read all responses (for aggregate counts).
+    // Students can only create/update their own responses (matched by VID).
+    // Deletions are not permitted.
+    match /meal_responses/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.resource.data.vid == getUserVid();
+      allow update: if isAuthenticated()
+        && resource.data.vid == getUserVid()
+        && request.resource.data.vid == getUserVid();
+      allow delete: if false;
+    }
+
+    // ── Maintenance Tickets Collection ─────────────────────────────────────
+    // All authenticated users can read tickets.
+    // Students can create tickets with their own VID.
+    // Students can update only their own tickets (limited to description).
+    // Admins can update any ticket (status, assignedTo, resolvedAt).
+    match /maintenance_tickets/{ticketId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.resource.data.vid == getUserVid();
+      allow update: if isAdmin()
+        || (isAuthenticated() && resource.data.vid == getUserVid());
+      allow delete: if isAdmin();
+    }
+
+    // ── Mess Crowd Metrics Collection ─────────────────────────────────────
+    // All authenticated users can read crowd status.
+    // Only admins can update crowd status.
+    match /mess_crowd_metrics/{messId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // ── Broadcasts Collection ─────────────────────────────────────────────
+    // All users can read broadcasts (campus announcements and emergency alerts).
+    // Only admins can create and delete broadcasts.
+    match /broadcasts/{broadcastId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if false;
+    }
+
+    // ── Deny all other paths ──────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+
+# Android build outputs & caches
+android-app/.gradle/
+android-app/build/
+android-app/app/build/
+android-app/local.properties
+android-app/.cxx/
+android-app/*.iml
+android-app/.idea/
+.gradle/
+local.properties
+
+# Temporary & scratch directories
+temp-app/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment & Secrets
+.env
+.env*.local
+*.pem
+
+# OS generated files
+.DS_Store
+Thumbs.db
