@@ -606,11 +606,16 @@ export default function KitchenPortal() {
                   className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/80 p-4 transition hover:bg-slate-100/70"
                 >
                   <div>
-                    <p className="text-sm font-black text-slate-800">{item.name}</p>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm border border-emerald-600 bg-white p-0.5" title="100% Pure Veg">
+                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                      </div>
+                      <p className="text-sm font-black text-slate-800">{item.name}</p>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 pl-5">
                       <span className="text-xs font-semibold text-slate-400">{item.calories} kcal</span>
                       <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-bold">
-                        Pure Veg
+                        🌱 Pure Veg
                       </span>
                     </div>
                   </div>
