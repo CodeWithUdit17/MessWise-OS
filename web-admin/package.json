@@ -6,9 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "serve": "npx -y serve out -p 3000",
+    "deploy": "next build && npx -y firebase-tools deploy --only hosting",
     "lint": "next lint"
   },
   "dependencies": {
+    "@swc/helpers": "^0.5.23",
     "firebase": "^10.14.1",
     "lucide-react": "^0.400.0",
     "next": "^14.2.0",

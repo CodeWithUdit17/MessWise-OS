@@ -250,6 +250,27 @@ fun StudentMessScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                                val cutoffInfo = when (uiState.selectedMealType) {
+                                    MealType.BREAKFAST -> "Cutoff: 4:00 AM (Serves 7:00 AM)"
+                                    MealType.LUNCH -> "Cutoff: 9:00 AM (Serves 12:00 PM)"
+                                    MealType.SNACKS -> "Cutoff: 1:00 PM (Serves 4:00 PM)"
+                                    MealType.DINNER -> "Cutoff: 4:00 PM (Serves 7:00 PM)"
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color(0xFFFEF3C7),
+                                    modifier = Modifier.padding(top = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "⏰ $cutoffInfo",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 10.sp
+                                        ),
+                                        color = Color(0xFF92400E),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
                             }
 
                             // Skip/Eat Status Badge
@@ -334,6 +355,11 @@ fun StudentMessScreen(
                     points = uiState.greenPoints,
                     onOpenScanner = onNavigateToPlateScanner
                 )
+            }
+
+            // ── Section 7B: Measurable Campus Environmental Impact ───────
+            item {
+                RealWorldImpactCard()
             }
 
             // Bottom spacing
@@ -683,12 +709,25 @@ private fun SkipEatToggleSection(
                             fontSize = 20.sp
                         )
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = mealType.displayName,
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontWeight = FontWeight.SemiBold
+                        Column {
+                            Text(
+                                text = mealType.displayName,
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             )
-                        )
+                            val cutoffInfo = when (mealType) {
+                                MealType.BREAKFAST -> "Cutoff 4:00 AM"
+                                MealType.LUNCH -> "Cutoff 9:00 AM"
+                                MealType.SNACKS -> "Cutoff 1:00 PM"
+                                MealType.DINNER -> "Cutoff 4:00 PM"
+                            }
+                            Text(
+                                text = "⏰ $cutoffInfo (+15 Pts)",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     Surface(
@@ -799,6 +838,105 @@ private fun GreenPointsInfoCard(
                     Text("📸 Open Plate Waste Scanner", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun RealWorldImpactCard() {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("🌍", fontSize = 22.sp)
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(
+                        "Measurable Campus Impact",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Text(
+                        "Live sustainability gains across campus dining halls",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ImpactMetricBox(
+                    title = "Food Saved",
+                    value = "420 kg",
+                    subtitle = "This week",
+                    color = Color(0xFF059669),
+                    bgColor = Color(0xFFECFDF5),
+                    modifier = Modifier.weight(1f)
+                )
+                ImpactMetricBox(
+                    title = "CO₂e Abated",
+                    value = "840 kg",
+                    subtitle = "GHG reduction",
+                    color = Color(0xFF2563EB),
+                    bgColor = Color(0xFFEFF6FF),
+                    modifier = Modifier.weight(1f)
+                )
+                ImpactMetricBox(
+                    title = "Waste Cut",
+                    value = "-38%",
+                    subtitle = "Vs baseline",
+                    color = Color(0xFFD97706),
+                    bgColor = Color(0xFFFEF3C7),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImpactMetricBox(
+    title: String,
+    value: String,
+    subtitle: String,
+    color: Color,
+    bgColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        color = bgColor
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black),
+                color = color
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color(0xFF0F172A),
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                color = Color(0xFF64748B),
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

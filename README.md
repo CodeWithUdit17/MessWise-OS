@@ -71,13 +71,15 @@ graph TD
 - Android Studio Ladybug / Koala (or JDK 17/21)
 - Firebase CLI (`firebase-tools`)
 
-### Running the Web Admin
-```bash
-cd web-admin
-npm install
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) to access the Admin Command Center.
+### Accessing the Web Admin Command Center
+- **Live Cloud Dashboard (No terminal needed)**: [https://messwise-os.web.app](https://messwise-os.web.app)
+- **1-Click Local Desktop Launcher**: Double-click `Launch-MessWise-Admin.bat` (or `Launch-MessWise-Admin-Silent.vbs`) to start and open `http://localhost:3000` automatically.
+- **Manual Local Development**:
+  ```bash
+  cd web-admin
+  npm install
+  npm run dev
+  ```
 
 ### Building & Running the Android App
 ```bash

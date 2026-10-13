@@ -25,7 +25,12 @@ import {
   Leaf,
   Clock,
   Send,
-  UserCheck
+  UserCheck,
+  Zap,
+  Download,
+  Sliders,
+  CheckCircle2,
+  AlertTriangle
 } from "lucide-react";
 import MessTimetable from "./MessTimetable";
 import {
@@ -135,6 +140,10 @@ interface MessCheckin {
   timestamp: Timestamp;
 }
 
+interface KitchenPortalProps {
+  selectedBlock?: string;
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 const MEAL_TYPES = ["BREAKFAST", "LUNCH", "SNACKS", "DINNER"] as const;
@@ -146,19 +155,25 @@ const MEAL_LABELS: Record<string, { emoji: string; time: string }> = {
 };
 
 const TOTAL_STUDENTS = 2000;
-const PER_CAPITA_KG = { rice: 0.08, dal: 0.05, dough: 0.12 };
+const PER_CAPITA_KG = {
+  rice: 0.08, // 80g
+  dal: 0.05,  // 50g
+  dough: 0.12, // 120g
+  veggies: 0.09, // 90g
+  oilGhee: 0.018, // 18ml
+};
 
 function todayISO(): string {
   return new Date().toISOString().split("T")[0];
 }
 
-export default function KitchenPortal() {
+export default function KitchenPortal({ selectedBlock = "ALL" }: KitchenPortalProps) {
   const today = todayISO();
   const [selectedMeal, setSelectedMeal] = useState<string>("LUNCH");
   const [selectedEditDate, setSelectedEditDate] = useState<string>(today);
   const [activeTab, setActiveTab] = useState<
-    "timetable" | "editor" | "special_lunch" | "sick_meals" | "feedback" | "plate_waste"
-  >("timetable");
+    "ai_procurement" | "timetable" | "editor" | "special_lunch" | "sick_meals" | "feedback" | "plate_waste"
+  >("ai_procurement");
 
   // ── Menu Data ──
   const { data: allMenus } = useCollection<MessMenu>("mess_menu");
@@ -208,12 +223,19 @@ export default function KitchenPortal() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
+  // ── Surge Incentive State ──
+  const [surgeMultiplier, setSurgeMultiplier] = useState<number>(1);
+  const [surgeActive, setSurgeActive] = useState<boolean>(false);
+
+  // ── Simulation Slider for AI Procurement ──
+  const [simulationHeadcount, setSimulationHeadcount] = useState<number>(1420);
+
   // ── Special Lunch Form State ──
   const [specialForm, setSpecialForm] = useState({
     title: "Grand Sunday Royal Feast",
     date: today,
     mealType: "LUNCH",
-    description: "Multi-course special pure vegetarian feast with Paneer Butter Masala, Kashmiri Dum Aloo, Gulab Jamun, and Badam Milk.",
+    description: "Multi-course pure vegetarian feast with Paneer Butter Masala, Kashmiri Dum Aloo, Gulab Jamun, and Badam Milk.",
     maxSlots: 250,
     tokenPrice: 0,
     menuItems: "Paneer Butter Masala, Kashmiri Pulao, Butter Naan, Gulab Jamun, Cold Badam Milk"
@@ -230,19 +252,17 @@ export default function KitchenPortal() {
     if (!checkins) return;
     const activeCheckinCount = checkins.length;
 
-    // Determine level automatically based on headcounts
     let targetLevel: "LOW" | "MODERATE" | "PEAK" = "LOW";
     let targetWait = 2;
 
     if (activeCheckinCount >= 120) {
-      targetLevel = "PEAK"; // Crowdy!
+      targetLevel = "PEAK";
       targetWait = 18;
     } else if (activeCheckinCount >= 50) {
       targetLevel = "MODERATE";
       targetWait = 7;
     }
 
-    // If different from database, automatically sync crowd metrics
     if (crowd && (crowd.currentLevel !== targetLevel || crowd.activeDiners !== activeCheckinCount)) {
       setDoc(doc(db, "mess_crowd_metrics", "main_mess"), {
         currentLevel: targetLevel,
@@ -262,7 +282,6 @@ export default function KitchenPortal() {
     const average = feedbacks.filter(f => f.rating === "AVERAGE").length;
     const unhappy = feedbacks.filter(f => f.rating === "UNHAPPY").length;
     const unhappyPct = Math.round((unhappy / total) * 100);
-    // Threshold: > 40% unhappy or >= 5 unhappy responses
     const takeoverTriggered = (unhappyPct > 40 && total >= 3) || unhappy >= 5;
     return { total, loved, average, unhappy, unhappyPct, takeoverTriggered };
   }, [feedbacks]);
@@ -294,15 +313,53 @@ export default function KitchenPortal() {
   // ── Forecaster calculations ──
   const mealResponses = responses.filter((r) => r.mealType === selectedMeal);
   const skipped = mealResponses.filter((r) => r.status === "SKIPPED").length;
-  const expectedEaters = TOTAL_STUDENTS - skipped;
-  const ingredientMultiplier = expectedEaters / TOTAL_STUDENTS;
+  const expectedEaters = Math.max(0, TOTAL_STUDENTS - skipped);
 
-  const forecast = {
-    rice: +(TOTAL_STUDENTS * PER_CAPITA_KG.rice * ingredientMultiplier).toFixed(1),
-    dal: +(TOTAL_STUDENTS * PER_CAPITA_KG.dal * ingredientMultiplier).toFixed(1),
-    dough: +(TOTAL_STUDENTS * PER_CAPITA_KG.dough * ingredientMultiplier).toFixed(1),
-    wastePrevented: +(skipped * (PER_CAPITA_KG.rice + PER_CAPITA_KG.dal + PER_CAPITA_KG.dough)).toFixed(1),
-  };
+  // Sync simulation headcount to actual expected diners initially
+  useEffect(() => {
+    if (expectedEaters > 0) {
+      setSimulationHeadcount(expectedEaters);
+    }
+  }, [expectedEaters]);
+
+  // Calculations for precision procurement based on simulated/active headcount
+  const precisionData = useMemo(() => {
+    const eaters = simulationHeadcount;
+    const riceKg = +(eaters * PER_CAPITA_KG.rice).toFixed(1);
+    const dalKg = +(eaters * PER_CAPITA_KG.dal).toFixed(1);
+    const doughKg = +(eaters * PER_CAPITA_KG.dough).toFixed(1);
+    const veggiesKg = +(eaters * PER_CAPITA_KG.veggies).toFixed(1);
+    const oilL = +(eaters * PER_CAPITA_KG.oilGhee).toFixed(1);
+    const gasCylinders = +(eaters * 0.00175).toFixed(1);
+
+    // Standard baseline (2000 blind cook)
+    const baseRice = +(TOTAL_STUDENTS * PER_CAPITA_KG.rice).toFixed(1);
+    const baseDal = +(TOTAL_STUDENTS * PER_CAPITA_KG.dal).toFixed(1);
+    const baseDough = +(TOTAL_STUDENTS * PER_CAPITA_KG.dough).toFixed(1);
+    const baseVeggies = +(TOTAL_STUDENTS * PER_CAPITA_KG.veggies).toFixed(1);
+    const baseOil = +(TOTAL_STUDENTS * PER_CAPITA_KG.oilGhee).toFixed(1);
+    const baseGas = +(TOTAL_STUDENTS * 0.00175).toFixed(1);
+
+    // Savings
+    const savedRice = +(baseRice - riceKg).toFixed(1);
+    const savedDal = +(baseDal - dalKg).toFixed(1);
+    const savedDough = +(baseDough - doughKg).toFixed(1);
+    const savedVeggies = +(baseVeggies - veggiesKg).toFixed(1);
+    const savedOil = +(baseOil - oilL).toFixed(1);
+    const savedGas = +(baseGas - gasCylinders).toFixed(1);
+
+    // Costs (₹)
+    const costPrecision = Math.round(riceKg * 60 + dalKg * 140 + doughKg * 38 + veggiesKg * 45 + oilL * 135 + gasCylinders * 1850);
+    const costBlind = Math.round(baseRice * 60 + baseDal * 140 + baseDough * 38 + baseVeggies * 45 + baseOil * 135 + baseGas * 1850);
+    const costSaved = costBlind - costPrecision;
+
+    return {
+      riceKg, dalKg, doughKg, veggiesKg, oilL, gasCylinders,
+      savedRice, savedDal, savedDough, savedVeggies, savedOil, savedGas,
+      costPrecision, costBlind, costSaved,
+      wasteSparedTotalKg: +(savedRice + savedDal + savedDough + savedVeggies).toFixed(1),
+    };
+  }, [simulationHeadcount]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -373,6 +430,26 @@ export default function KitchenPortal() {
     }
   };
 
+  // ── Surge Incentive Toggle ──
+  const toggleSurgeIncentive = async () => {
+    const nextState = !surgeActive;
+    setSurgeActive(nextState);
+    const multiplier = nextState ? 2 : 1;
+    setSurgeMultiplier(multiplier);
+    try {
+      await setDoc(doc(db, "mess_operations_status", "surge_incentive"), {
+        active: nextState,
+        multiplier: multiplier,
+        bonusPointsPerSkip: nextState ? 30 : 15,
+        updatedAt: Timestamp.now(),
+        reason: nextState ? "Surge Green Points active to mitigate dining hall congestion" : "Normal incentive rates",
+      }, { merge: true });
+      showToast(nextState ? "⚡ Surge Incentive Active: +30 Pts/Skip enabled!" : "✅ Surge Incentive deactivated (Normal +15 Pts)");
+    } catch {
+      showToast("❌ Failed to update surge incentive");
+    }
+  };
+
   // ── Create Special Lunch ──
   const handlePublishSpecialLunch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -409,17 +486,38 @@ export default function KitchenPortal() {
     }
   };
 
+  // Export Procurement Slip
+  const exportProcurementCSV = () => {
+    const headers = ["Raw Ingredient", "Unit", "Precision Cook Quantity", "Standard Blind Cook Quantity", "Net Spared"];
+    const rows = [
+      ["Basmati / Sona Masoori Rice", "kg", precisionData.riceKg, 160, precisionData.savedRice],
+      ["Toor / Arhar Dal", "kg", precisionData.dalKg, 100, precisionData.savedDal],
+      ["Chakki Fresh Wheat Atta", "kg", precisionData.doughKg, 240, precisionData.savedDough],
+      ["Seasonal Mixed Vegetables", "kg", precisionData.veggiesKg, 180, precisionData.savedVeggies],
+      ["Cooking Oil & Pure Desi Ghee", "L", precisionData.oilL, 36, precisionData.savedOil],
+      ["Commercial LPG Cylinders", "units", precisionData.gasCylinders, 3.5, precisionData.savedGas],
+    ];
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `MessWise_Procurement_Requisition_${today}_${selectedMeal}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-6 animate-fade-in">
       {/* Toast Alert */}
       {toast && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-2 rounded-2xl bg-slate-900 text-white px-5 py-3 text-sm font-bold shadow-2xl border border-slate-700 animate-fade-in">
-          <Check className="h-4 w-4 text-emerald-400" />
+        <div className="toast toast-success">
+          <Check className="h-4 w-4" />
           <span>{toast}</span>
         </div>
       )}
 
-      {/* ── Emergency Alert: Hostel Team Takeover ──────────────── */}
+      {/* Emergency Alert: Hostel Team Takeover */}
       {feedbackMetrics.takeoverTriggered && (
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-3xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 p-6 text-white shadow-xl shadow-red-500/20 border border-red-400 animate-pulse">
           <div className="flex items-center gap-4">
@@ -439,7 +537,7 @@ export default function KitchenPortal() {
                 Quality Threshold Breached: Mess Handed Over to Hostel Team!
               </h2>
               <p className="text-xs text-white/90">
-                Due to high dissatisfaction with today's meal, dining operations and preparation standards are now directly inspected and supervised by the Hostel Student Committee.
+                Due to high dissatisfaction with today&apos;s meal, dining operations and preparation standards are now directly inspected and supervised by the Hostel Student Committee.
               </p>
             </div>
           </div>
@@ -447,98 +545,105 @@ export default function KitchenPortal() {
       )}
 
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 border border-amber-200 shadow-sm">
-            <ChefHat className="h-6 w-6 text-amber-800" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 shadow-lg shadow-amber-500/20 text-white font-black text-xl">
+            <ChefHat className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black tracking-tight text-slate-900">
-                Mess Head & Kitchen Operations
+              <h1 className="text-2xl lg:text-3xl font-black text-white tracking-tight">
+                Mess Head & Kitchen Command
               </h1>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 px-3 py-1 text-xs font-black border border-emerald-200">
+              <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-0.5 text-xs font-bold text-emerald-400">
                 🌱 100% Pure Veg
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Production forecasting, special lunch facilities, sick care & real-time gate automation
+            <p className="text-xs sm:text-sm text-slate-400 mt-1">
+              AI raw material demand forecasting, 7-day nutrition planner, sick care dispatch & gate turnstiles
             </p>
           </div>
         </div>
 
-        {/* Live Crowd Badge with Automatic Detection Status */}
-        <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl p-2.5 shadow-sm">
-          <div className="flex items-center gap-2 px-3">
-            <QrCode className="h-4 w-4 text-slate-400" />
+        {/* Live Gate & Surge Status */}
+        <div className="flex items-center gap-3">
+          {/* Surge Points Toggle Button */}
+          <button
+            onClick={toggleSurgeIncentive}
+            className={`flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-xs font-bold transition shadow-sm ${
+              surgeActive
+                ? "bg-amber-500 text-slate-950 border-amber-300 font-black shadow-amber-500/30"
+                : "bg-slate-800 border-slate-700 text-amber-300 hover:bg-slate-750"
+            }`}
+          >
+            <Zap className={`h-4 w-4 ${surgeActive ? "fill-current animate-bounce" : "text-amber-400"}`} />
+            <span>{surgeActive ? "⚡ 2x Surge Active (+30 Pts)" : "Activate Surge (+30 Pts)"}</span>
+          </button>
+
+          {/* Gate Turnstile Badge */}
+          <div className="flex items-center gap-3 rounded-2xl border border-slate-700 bg-slate-800/80 p-2 px-3.5 shadow-sm">
+            <QrCode className="h-4 w-4 text-brand-400" />
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Gate Check-ins</p>
-              <p className="text-sm font-black text-slate-800">{checkins.length} students today</p>
-            </div>
-          </div>
-          <div className="h-8 w-px bg-slate-200" />
-          <div className="flex items-center gap-2 px-3">
-            <div className={`h-3 w-3 rounded-full ${crowd?.currentLevel === "PEAK" ? "bg-red-500 animate-ping" : crowd?.currentLevel === "MODERATE" ? "bg-amber-500" : "bg-emerald-500"}`} />
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rush Level</p>
-              <p className="text-sm font-black text-slate-800">
-                {crowd?.currentLevel === "PEAK" ? "⚠️ CROWDY" : crowd?.currentLevel || "LOW"}
-              </p>
+              <p className="text-xs font-black text-white">{checkins.length} diners</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Top Stats Row ──────────────────────────────────────────────── */}
+      {/* Top Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="stat-card bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-            <Users className="h-4 w-4 text-blue-500" />
-            Expected Diners
+        <div className="card-glass p-5">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+            <Users className="h-4 w-4 text-blue-400" />
+            Expected Diners ({selectedMeal})
           </div>
-          <p className="text-2xl font-black text-slate-900 mt-2">{expectedEaters}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">{skipped} students opted out</p>
+          <p className="text-2xl font-black text-white mt-2">{expectedEaters}</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">{skipped} advance opt-outs</p>
         </div>
 
-        <div className="stat-card bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-            <HeartPulse className="h-4 w-4 text-rose-500" />
-            Sick Meals Today
+        <div className="card-glass p-5">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+            <HeartPulse className="h-4 w-4 text-rose-400" />
+            Sick Meals Active
           </div>
-          <p className="text-2xl font-black text-rose-600 mt-2">{sickMealRequests.length}</p>
+          <p className="text-2xl font-black text-rose-400 mt-2">{sickMealRequests.length}</p>
           <p className="text-[11px] text-slate-400 mt-0.5">Khichdi & mild care diets</p>
         </div>
 
-        <div className="stat-card bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-            <Award className="h-4 w-4 text-emerald-500" />
+        <div className="card-glass p-5">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+            <Award className="h-4 w-4 text-emerald-400" />
             Clean Plates Scanned
           </div>
-          <p className="text-2xl font-black text-emerald-600 mt-2">{plateStats.clean} / {plateStats.total}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">+{plateStats.coinsAwarded} Green Coins earned</p>
+          <p className="text-2xl font-black text-emerald-400 mt-2">
+            {plateStats.clean} <span className="text-sm font-semibold text-slate-400">/ {plateStats.total}</span>
+          </p>
+          <p className="text-[11px] text-slate-400 mt-0.5">+{plateStats.coinsAwarded} Green Coins credited</p>
         </div>
 
-        <div className="stat-card bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-            <ThumbsDown className="h-4 w-4 text-amber-500" />
-            Food Feedback
+        <div className="card-glass p-5">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+            <ThumbsDown className="h-4 w-4 text-amber-400" />
+            Student CSAT Rating
           </div>
-          <p className="text-2xl font-black text-slate-900 mt-2">
-            {feedbackMetrics.unhappyPct}% <span className="text-xs font-bold text-slate-400">Unhappy</span>
+          <p className="text-2xl font-black text-white mt-2">
+            {100 - feedbackMetrics.unhappyPct}% <span className="text-xs font-semibold text-slate-400">Satisfied</span>
           </p>
-          <p className="text-[11px] text-slate-400 mt-0.5">{feedbackMetrics.total} ratings received</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">{feedbackMetrics.total} meal responses</p>
         </div>
       </div>
 
-      {/* ── View Switcher Navigation Tabs ──────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/80 pb-3">
+      {/* Navigation Tabs */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
         {[
-          { id: "timetable", label: "Food Timetable", icon: Calendar },
-          { id: "editor", label: "Menu Editor & Batching", icon: ChefHat },
-          { id: "special_lunch", label: "🌟 Special Lunch Facility", icon: Sparkles },
+          { id: "ai_procurement", label: "🧠 AI Precision Procurement", icon: Scale },
+          { id: "timetable", label: "Food Timetable & Generator", icon: Calendar },
+          { id: "editor", label: "Live Menu Editor", icon: ChefHat },
+          { id: "special_lunch", label: "🌟 Special Feast Facility", icon: Sparkles },
           { id: "sick_meals", label: `🥣 Sick Meals (${sickMealRequests.filter(s => s.status !== "DELIVERED").length})`, icon: HeartPulse },
           { id: "feedback", label: "Food Quality & Oversight", icon: ThumbsDown },
-          { id: "plate_waste", label: "🌿 Plate Waste & Coins", icon: Leaf },
+          { id: "plate_waste", label: "🌿 Clean Plate Audit", icon: Leaf },
         ].map((t) => {
           const Icon = t.icon;
           const isActive = activeTab === t.id;
@@ -546,10 +651,10 @@ export default function KitchenPortal() {
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id as any)}
-              className={`flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs sm:text-sm font-black transition ${
+              className={`flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs sm:text-sm font-bold transition ${
                 isActive
-                  ? "bg-amber-500 text-white shadow-md shadow-amber-500/20 scale-[1.02]"
-                  : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200"
+                  ? "bg-amber-500 text-slate-950 font-black shadow-lg shadow-amber-500/20 scale-[1.02]"
+                  : "bg-slate-800/80 text-slate-300 hover:bg-slate-800 border border-slate-700"
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -559,24 +664,181 @@ export default function KitchenPortal() {
         })}
       </div>
 
-      {/* ── TAB 1: Weekly Timetable ──────────────────────────────────────── */}
+      {/* ── TAB 1: AI PRECISION PROCUREMENT (NEW INNOVATION CORE) ── */}
+      {activeTab === "ai_procurement" && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Top Banner: Financial & Environmental Impact */}
+          <div className="card-glass border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-slate-900 to-slate-900 p-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="rounded-full bg-amber-500/20 border border-amber-500/40 px-3 py-0.5 text-xs font-black text-amber-300">
+                    PREDICTIVE ALGORITHMIC BATCH SIZING
+                  </span>
+                  <span className="text-xs font-semibold text-slate-400">
+                    Selected Meal: {selectedMeal}
+                  </span>
+                </div>
+                <h2 className="text-xl font-black text-white tracking-tight">
+                  Raw Grain & Ingredient Precision Procurement
+                </h2>
+                <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                  Eliminating the blind cooking cycle. The kitchen loads boilers based on verified 3-hour prior headcounts, preventing cooked food spoilage and cutting raw procurement bills.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-4 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+                <div className="text-right">
+                  <p className="text-xs text-slate-400 font-bold uppercase">Estimated Meal Savings</p>
+                  <p className="text-2xl font-black text-emerald-400">
+                    ₹{precisionData.costSaved.toLocaleString()}
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    {precisionData.wasteSparedTotalKg} kg raw ingredients spared
+                  </p>
+                </div>
+                <button
+                  onClick={exportProcurementCSV}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Requisition Slip (CSV)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Attendance Slider for Scenario Planning */}
+          <div className="card-glass p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-5">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Sliders className="h-4 w-4 text-brand-400" />
+                  Live Attendance Sizing & Simulation Slider
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Simulate different turnout scenarios or lock to today&apos;s verified attendance
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-400 font-semibold">Headcount:</span>
+                <span className="rounded-xl bg-slate-900 border border-slate-700 px-3 py-1 text-sm font-black text-brand-400 font-mono">
+                  {simulationHeadcount} Diners
+                </span>
+                <button
+                  onClick={() => setSimulationHeadcount(expectedEaters)}
+                  className="text-xs text-slate-400 hover:text-white underline"
+                >
+                  Reset to Live ({expectedEaters})
+                </button>
+              </div>
+            </div>
+
+            <input
+              type="range"
+              min="500"
+              max="2000"
+              step="10"
+              value={simulationHeadcount}
+              onChange={(e) => setSimulationHeadcount(Number(e.target.value))}
+              className="w-full accent-emerald-500 h-2 bg-slate-800 rounded-lg cursor-pointer"
+            />
+            <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-mono font-bold">
+              <span>500 (Minimum Holiday)</span>
+              <span>1,250 (Moderate Weekday)</span>
+              <span>2,000 (Full Capacity Blind)</span>
+            </div>
+          </div>
+
+          {/* Raw Material Yield Table */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-xl">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <h3 className="text-sm font-black text-white flex items-center gap-2">
+                <Scale className="h-4 w-4 text-amber-400" />
+                Raw Ingredient Requirements for {simulationHeadcount} Diners
+              </h3>
+              <span className="text-xs text-slate-400">
+                100% Pure Vegetarian Institutional Standards
+              </span>
+            </div>
+
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr>
+                  <th className="table-header">Raw Ingredient</th>
+                  <th className="table-header">Per Student Ratio</th>
+                  <th className="table-header">Precision Batch Required</th>
+                  <th className="table-header">Traditional Blind Batch (2000)</th>
+                  <th className="table-header text-right">Raw Food Spared</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                <tr>
+                  <td className="table-cell font-bold text-white">Basmati / Sona Masoori Rice</td>
+                  <td className="table-cell text-xs text-slate-400">80g / diner</td>
+                  <td className="table-cell font-mono font-bold text-amber-400">{precisionData.riceKg} kg</td>
+                  <td className="table-cell font-mono text-slate-400">160.0 kg</td>
+                  <td className="table-cell text-right font-mono font-bold text-emerald-400">+{precisionData.savedRice} kg</td>
+                </tr>
+                <tr>
+                  <td className="table-cell font-bold text-white">Toor / Arhar / Moong Dal</td>
+                  <td className="table-cell text-xs text-slate-400">50g / diner</td>
+                  <td className="table-cell font-mono font-bold text-amber-400">{precisionData.dalKg} kg</td>
+                  <td className="table-cell font-mono text-slate-400">100.0 kg</td>
+                  <td className="table-cell text-right font-mono font-bold text-emerald-400">+{precisionData.savedDal} kg</td>
+                </tr>
+                <tr>
+                  <td className="table-cell font-bold text-white">Chakki Fresh Wheat Atta / Flour</td>
+                  <td className="table-cell text-xs text-slate-400">120g / diner</td>
+                  <td className="table-cell font-mono font-bold text-amber-400">{precisionData.doughKg} kg</td>
+                  <td className="table-cell font-mono text-slate-400">240.0 kg</td>
+                  <td className="table-cell text-right font-mono font-bold text-emerald-400">+{precisionData.savedDough} kg</td>
+                </tr>
+                <tr>
+                  <td className="table-cell font-bold text-white">Seasonal Green Vegetables & Paneer</td>
+                  <td className="table-cell text-xs text-slate-400">90g / diner</td>
+                  <td className="table-cell font-mono font-bold text-amber-400">{precisionData.veggiesKg} kg</td>
+                  <td className="table-cell font-mono text-slate-400">180.0 kg</td>
+                  <td className="table-cell text-right font-mono font-bold text-emerald-400">+{precisionData.savedVeggies} kg</td>
+                </tr>
+                <tr>
+                  <td className="table-cell font-bold text-white">Cooking Oil & Pure Desi Ghee</td>
+                  <td className="table-cell text-xs text-slate-400">18ml / diner</td>
+                  <td className="table-cell font-mono font-bold text-amber-400">{precisionData.oilL} Liters</td>
+                  <td className="table-cell font-mono text-slate-400">36.0 Liters</td>
+                  <td className="table-cell text-right font-mono font-bold text-emerald-400">+{precisionData.savedOil} L</td>
+                </tr>
+                <tr>
+                  <td className="table-cell font-bold text-white">Commercial LPG Fuel (Steam Boilers)</td>
+                  <td className="table-cell text-xs text-slate-400">0.00175 cyl / diner</td>
+                  <td className="table-cell font-mono font-bold text-amber-400">{precisionData.gasCylinders} Cylinders</td>
+                  <td className="table-cell font-mono text-slate-400">3.5 Cylinders</td>
+                  <td className="table-cell text-right font-mono font-bold text-emerald-400">+{precisionData.savedGas} Cyl</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 2: Weekly Timetable ──────────────────────────────────────── */}
       {activeTab === "timetable" && (
         <div className="animate-fade-in">
           <MessTimetable menus={allMenus} onSelectMealForEdit={handleSelectMealForEdit} />
         </div>
       )}
 
-      {/* ── TAB 2: Live Menu Editor & Batching Forecaster ────────────────── */}
+      {/* ── TAB 3: Live Menu Editor & Batching Forecaster ────────────────── */}
       {activeTab === "editor" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
-          <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-6">
+          <div className="lg:col-span-2 card-glass">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-6">
               <div>
-                <h3 className="text-lg font-black text-slate-900">
-                  Editing: {selectedMeal} ({selectedEditDate})
+                <h3 className="text-base font-black text-white">
+                  Editing Menu: {selectedMeal} ({selectedEditDate})
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Update meal items distributed to Android student apps
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Synchronized in real-time to student Android mobile applications
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -584,12 +846,12 @@ export default function KitchenPortal() {
                   type="date"
                   value={selectedEditDate}
                   onChange={(e) => setSelectedEditDate(e.target.value)}
-                  className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700"
+                  className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-bold text-slate-200"
                 />
                 <select
                   value={selectedMeal}
                   onChange={(e) => setSelectedMeal(e.target.value)}
-                  className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700"
+                  className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-bold text-slate-200"
                 >
                   {MEAL_TYPES.map((m) => (
                     <option key={m} value={m}>{MEAL_LABELS[m]?.emoji} {m}</option>
@@ -603,25 +865,23 @@ export default function KitchenPortal() {
               {editItems.map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/80 p-4 transition hover:bg-slate-100/70"
+                  className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/60 p-4 transition hover:bg-slate-800/80"
                 >
                   <div>
                     <div className="flex items-center gap-2">
-                      <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm border border-emerald-600 bg-white p-0.5" title="100% Pure Veg">
-                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                      <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm border border-emerald-500 bg-slate-900 p-0.5">
+                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                       </div>
-                      <p className="text-sm font-black text-slate-800">{item.name}</p>
+                      <p className="text-sm font-bold text-white">{item.name}</p>
                     </div>
                     <div className="flex items-center gap-2 mt-1 pl-5">
                       <span className="text-xs font-semibold text-slate-400">{item.calories} kcal</span>
-                      <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-bold">
-                        🌱 Pure Veg
-                      </span>
+                      <span className="badge badge-green text-[10px]">Pure Veg</span>
                     </div>
                   </div>
                   <button
                     onClick={() => removeItem(idx)}
-                    className="p-2 text-slate-400 hover:text-red-600 transition"
+                    className="p-2 text-slate-400 hover:text-rose-400 transition"
                     title="Remove item"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -638,200 +898,179 @@ export default function KitchenPortal() {
                 value={newItemName}
                 onChange={(e) => setNewItemName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addItem()}
-                className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-amber-500 focus:outline-none"
+                className="input-field"
               />
               <button
                 onClick={addItem}
-                className="flex items-center gap-2 rounded-2xl bg-slate-900 text-white px-5 py-3 text-sm font-bold hover:bg-slate-800 transition"
+                className="btn-secondary flex items-center gap-2 shrink-0"
               >
                 <Plus className="h-4 w-4" /> Add Item
               </button>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
+            <div className="mt-6 pt-4 border-t border-slate-800 flex justify-end">
               <button
                 onClick={saveMenu}
                 disabled={saving}
-                className="flex items-center gap-2 rounded-2xl bg-amber-500 text-white px-6 py-3 text-sm font-black shadow-lg shadow-amber-500/25 hover:bg-amber-600 transition disabled:opacity-50"
+                className="btn-primary flex items-center gap-2"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Save Changes to Cloud
+                <span>Save Changes to Cloud</span>
               </button>
             </div>
           </div>
 
-          {/* Predictive Forecaster Card */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-6">
+          {/* Quick Rush Controller Card */}
+          <div className="card-glass space-y-6">
             <div>
-              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-700">
-                <Scale className="h-4 w-4" />
-                Raw Material Forecaster
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-400">
+                <Gauge className="h-4 w-4" />
+                Crowd Rush Override
               </div>
-              <h3 className="text-lg font-black text-slate-900 mt-1">Batch Sizing</h3>
-              <p className="text-xs text-slate-500">Calculated based on {expectedEaters} eating students</p>
+              <h3 className="text-base font-black text-white mt-1">Manual Rush Controller</h3>
+              <p className="text-xs text-slate-400">Pushes immediate queue update to student homescreen</p>
             </div>
 
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                <p className="text-xs text-slate-500 font-bold">Rice to Cook</p>
-                <p className="text-xl font-black text-slate-800 mt-1">{forecast.rice} kg</p>
-              </div>
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                <p className="text-xs text-slate-500 font-bold">Dal / Pulses</p>
-                <p className="text-xl font-black text-slate-800 mt-1">{forecast.dal} kg</p>
-              </div>
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                <p className="text-xs text-slate-500 font-bold">Wheat Dough</p>
-                <p className="text-xl font-black text-slate-800 mt-1">{forecast.dough} kg</p>
-              </div>
-            </div>
-
-            {/* Manual Rush Override */}
-            <div className="pt-4 border-t border-slate-100">
-              <p className="text-xs font-black uppercase text-slate-400 mb-3">Manual Rush Override</p>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => updateCrowd("LOW", 2)}
-                  className="rounded-xl border border-emerald-200 bg-emerald-50 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition"
-                >
-                  Low
-                </button>
-                <button
-                  onClick={() => updateCrowd("MODERATE", 7)}
-                  className="rounded-xl border border-amber-200 bg-amber-50 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100 transition"
-                >
-                  Moderate
-                </button>
-                <button
-                  onClick={() => updateCrowd("PEAK", 18)}
-                  className="rounded-xl border border-red-200 bg-red-50 py-2 text-xs font-bold text-red-800 hover:bg-red-100 transition"
-                >
-                  Crowdy
-                </button>
-              </div>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={() => updateCrowd("LOW", 2)}
+                className="rounded-xl border border-emerald-500/30 bg-emerald-500/15 py-3 text-xs font-bold text-emerald-400 hover:bg-emerald-500/25 transition"
+              >
+                Low (2m)
+              </button>
+              <button
+                onClick={() => updateCrowd("MODERATE", 7)}
+                className="rounded-xl border border-amber-500/30 bg-amber-500/15 py-3 text-xs font-bold text-amber-300 hover:bg-amber-500/25 transition"
+              >
+                Moderate (7m)
+              </button>
+              <button
+                onClick={() => updateCrowd("PEAK", 22)}
+                className="rounded-xl border border-rose-500/30 bg-rose-500/15 py-3 text-xs font-bold text-rose-300 hover:bg-rose-500/25 transition"
+              >
+                Crowdy (22m)
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── TAB 3: Special Lunch Facility ────────────────────────────────── */}
+      {/* ── TAB 4: Special Lunch Facility ────────────────────────────────── */}
       {activeTab === "special_lunch" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
-          {/* Create Special Event Form */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <div className="card-glass space-y-4">
             <div>
-              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-600">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-400">
                 <Sparkles className="h-4 w-4" />
                 Publish Special Feast
               </div>
-              <h3 className="text-lg font-black text-slate-900 mt-1">Special Lunch Facility</h3>
-              <p className="text-xs text-slate-500">
-                Students can book special festival meals & weekend feasts via Android app
+              <h3 className="text-base font-black text-white mt-1">Special Lunch Facility</h3>
+              <p className="text-xs text-slate-400">
+                Students can reserve festival meals & royal weekend feasts via Android
               </p>
             </div>
 
             <form onSubmit={handlePublishSpecialLunch} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Event Title</label>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Event Title</label>
                 <input
                   type="text"
                   required
                   value={specialForm.title}
                   onChange={(e) => setSpecialForm(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm"
+                  className="input-field"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Date</label>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Date</label>
                   <input
                     type="date"
                     required
                     value={specialForm.date}
                     onChange={(e) => setSpecialForm(prev => ({ ...prev, date: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm"
+                    className="input-field"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Max Capacity</label>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Max Capacity</label>
                   <input
                     type="number"
                     required
                     value={specialForm.maxSlots}
                     onChange={(e) => setSpecialForm(prev => ({ ...prev, maxSlots: Number(e.target.value) }))}
-                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm"
+                    className="input-field"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Special Pure Veg Menu Items</label>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Special Pure Veg Menu Items</label>
                 <textarea
                   rows={2}
                   required
                   value={specialForm.menuItems}
                   onChange={(e) => setSpecialForm(prev => ({ ...prev, menuItems: e.target.value }))}
                   placeholder="Comma separated items"
-                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm"
+                  className="input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Description</label>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Description</label>
                 <textarea
                   rows={3}
                   value={specialForm.description}
                   onChange={(e) => setSpecialForm(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm"
+                  className="input-field"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={publishingSpecial}
-                className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black py-3 text-sm shadow-md shadow-amber-500/20 hover:brightness-105 transition"
+                className="btn-primary w-full flex items-center justify-center gap-2"
               >
-                {publishingSpecial ? "Publishing..." : "🌟 Publish Special Lunch"}
+                {publishingSpecial ? "Publishing..." : "🌟 Publish Special Feast"}
               </button>
             </form>
           </div>
 
-          {/* Active Special Lunches List */}
           <div className="lg:col-span-2 space-y-4">
-            <h3 className="text-lg font-black text-slate-900">Upcoming Special Lunches</h3>
+            <h3 className="text-base font-black text-white">Upcoming Special Lunches</h3>
             {specialLunches.length === 0 ? (
-              <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-slate-400">
-                <Sparkles className="h-8 w-8 mx-auto mb-2 text-slate-300" />
-                <p className="font-bold">No active special lunches</p>
+              <div className="card-glass p-12 text-center text-slate-400">
+                <Sparkles className="h-8 w-8 mx-auto mb-2 text-slate-500" />
+                <p className="font-bold text-white">No active special lunches</p>
                 <p className="text-xs">Publish one to enable student reservations</p>
               </div>
             ) : (
               specialLunches.map((item) => (
-                <div key={item.id} className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                <div key={item.id} className="card-glass p-6">
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-amber-100 text-amber-800 text-[10px] font-black px-2.5 py-0.5 uppercase">
+                        <span className="badge badge-amber uppercase">
                           {item.date}
                         </span>
                         <span className="text-xs font-bold text-slate-400">Pure Veg Feast</span>
                       </div>
-                      <h4 className="text-base font-black text-slate-900 mt-1">{item.title}</h4>
-                      <p className="text-xs text-slate-500 mt-1">{item.description}</p>
+                      <h4 className="text-base font-black text-white mt-1">{item.title}</h4>
+                      <p className="text-xs text-slate-400 mt-1">{item.description}</p>
                     </div>
 
                     <div className="text-right">
-                      <p className="text-xl font-black text-amber-600">
+                      <p className="text-xl font-black text-amber-400">
                         {item.bookedCount || 0} / {item.maxSlots}
                       </p>
                       <p className="text-[10px] font-bold text-slate-400 uppercase">Booked Seats</p>
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-1.5">
+                  <div className="mt-4 pt-4 border-t border-slate-800 flex flex-wrap gap-1.5">
                     {item.menuItems?.map((dish, i) => (
-                      <span key={i} className="rounded-full bg-slate-100 text-slate-700 px-3 py-1 text-xs font-bold">
+                      <span key={i} className="rounded-full bg-slate-800 border border-slate-700 text-slate-300 px-3 py-1 text-xs font-bold">
                         🍽️ {dish}
                       </span>
                     ))}
@@ -843,75 +1082,75 @@ export default function KitchenPortal() {
         </div>
       )}
 
-      {/* ── TAB 4: Health Issues & Sick Meals Care ───────────────────────── */}
+      {/* ── TAB 5: Sick Meals Care ───────────────────────────────────────── */}
       {activeTab === "sick_meals" && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="card-glass space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
             <div>
-              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-rose-600">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-rose-400">
                 <HeartPulse className="h-4 w-4" />
                 Student Health Care
               </div>
-              <h3 className="text-lg font-black text-slate-900 mt-1">Sick Meal & Dietary Care Queue</h3>
-              <p className="text-xs text-slate-500">
+              <h3 className="text-base font-black text-white mt-1">Sick Meal & Dietary Care Queue</h3>
+              <p className="text-xs text-slate-400">
                 Mild diet requests (Khichdi, boiled veggies, curd) requested by unwell students
               </p>
             </div>
-            <span className="rounded-2xl bg-rose-50 text-rose-700 border border-rose-200 px-4 py-2 text-xs font-black">
+            <span className="badge badge-red">
               {sickMealRequests.length} Active Requests
             </span>
           </div>
 
           {sickMealRequests.length === 0 ? (
             <div className="p-12 text-center text-slate-400">
-              <HeartPulse className="h-8 w-8 mx-auto mb-2 text-slate-300" />
-              <p className="font-bold">No active sick meal requests</p>
-              <p className="text-xs">Students will submit health requests via the Android app</p>
+              <HeartPulse className="h-8 w-8 mx-auto mb-2 text-slate-500" />
+              <p className="font-bold text-white">No active sick meal requests</p>
+              <p className="text-xs">Students submit health dietary requests via the Android mobile app</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {sickMealRequests.map((req) => (
-                <div key={req.id} className="rounded-2xl border border-slate-200 p-5 space-y-3 bg-slate-50/50">
+                <div key={req.id} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <span className="text-xs font-black text-slate-800">
+                      <span className="text-xs font-black text-white">
                         {req.vid} {req.studentName ? `(${req.studentName})` : ""}
                       </span>
-                      <p className="text-xs font-bold text-rose-700">
+                      <p className="text-xs font-bold text-rose-400">
                         Block {req.hostelBlock} • Room {req.roomNo}
                       </p>
                     </div>
-                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase ${
-                      req.status === "DELIVERED" ? "bg-emerald-100 text-emerald-800" :
-                      req.status === "OUT_FOR_DELIVERY" ? "bg-blue-100 text-blue-800" :
-                      req.status === "PREPARING" ? "bg-amber-100 text-amber-800" : "bg-slate-200 text-slate-700"
+                    <span className={`badge ${
+                      req.status === "DELIVERED" ? "badge-green" :
+                      req.status === "OUT_FOR_DELIVERY" ? "badge-blue" :
+                      req.status === "PREPARING" ? "badge-amber" : "badge-purple"
                     }`}>
                       {req.status.replace(/_/g, " ")}
                     </span>
                   </div>
 
-                  <div className="text-xs text-slate-700 space-y-1 bg-white p-3 rounded-xl border border-slate-100">
-                    <p><strong className="text-slate-900">Diet Requested:</strong> {req.dietPreference}</p>
-                    <p><strong className="text-slate-900">Health Symptoms:</strong> {req.symptoms || "Mild recovery diet"}</p>
-                    <p><strong className="text-slate-900">Delivery Method:</strong> {req.deliveryType === "ROOM_DELIVERY" ? "🚪 Hostel Room Delivery" : "🏃 Counter Pickup"}</p>
+                  <div className="text-xs text-slate-300 space-y-1 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                    <p><strong className="text-white">Diet Requested:</strong> {req.dietPreference}</p>
+                    <p><strong className="text-white">Health Symptoms:</strong> {req.symptoms || "Mild recovery diet"}</p>
+                    <p><strong className="text-white">Delivery Method:</strong> {req.deliveryType === "ROOM_DELIVERY" ? "🚪 Hostel Room Delivery" : "🏃 Counter Pickup"}</p>
                   </div>
 
                   <div className="flex gap-2 pt-2">
                     <button
                       onClick={() => updateSickMealStatus(req.id, "PREPARING")}
-                      className="flex-1 rounded-xl bg-amber-500 text-white text-xs font-bold py-2 hover:bg-amber-600 transition"
+                      className="flex-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold py-2 hover:bg-amber-500/30 transition"
                     >
                       Preparing
                     </button>
                     <button
                       onClick={() => updateSickMealStatus(req.id, "OUT_FOR_DELIVERY")}
-                      className="flex-1 rounded-xl bg-blue-600 text-white text-xs font-bold py-2 hover:bg-blue-700 transition"
+                      className="flex-1 rounded-xl bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold py-2 hover:bg-blue-500/30 transition"
                     >
                       Dispatch
                     </button>
                     <button
                       onClick={() => updateSickMealStatus(req.id, "DELIVERED")}
-                      className="flex-1 rounded-xl bg-emerald-600 text-white text-xs font-bold py-2 hover:bg-emerald-700 transition"
+                      className="flex-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold py-2 hover:bg-emerald-500/30 transition"
                     >
                       Delivered
                     </button>
@@ -923,52 +1162,52 @@ export default function KitchenPortal() {
         </div>
       )}
 
-      {/* ── TAB 5: Food Quality & Democratic Oversight ──────────────────── */}
+      {/* ── TAB 6: Food Quality & Democratic Oversight ──────────────────── */}
       {activeTab === "feedback" && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-6 animate-fade-in">
+        <div className="card-glass space-y-6 animate-fade-in">
           <div>
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-600">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-400">
               <ThumbsDown className="h-4 w-4" />
               Student Voice & Accountability
             </div>
-            <h3 className="text-lg font-black text-slate-900 mt-1">Food Quality Rating & Oversight</h3>
-            <p className="text-xs text-slate-500">
+            <h3 className="text-base font-black text-white mt-1">Food Quality Rating & Oversight</h3>
+            <p className="text-xs text-slate-400">
               If unhappy feedback exceeds 40%, the mess is automatically handed over to the Hostel Oversight Committee
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-center">
               <p className="text-3xl">😋</p>
-              <p className="text-xl font-black text-emerald-800 mt-2">{feedbackMetrics.loved}</p>
-              <p className="text-xs font-bold text-emerald-700">Loved It</p>
+              <p className="text-xl font-black text-emerald-400 mt-2">{feedbackMetrics.loved}</p>
+              <p className="text-xs font-bold text-emerald-300">Loved It</p>
             </div>
-            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-center">
+            <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-5 text-center">
               <p className="text-3xl">😐</p>
-              <p className="text-xl font-black text-blue-800 mt-2">{feedbackMetrics.average}</p>
-              <p className="text-xs font-bold text-blue-700">Acceptable</p>
+              <p className="text-xl font-black text-blue-400 mt-2">{feedbackMetrics.average}</p>
+              <p className="text-xs font-bold text-blue-300">Acceptable</p>
             </div>
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-center">
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 text-center">
               <p className="text-3xl">😡</p>
-              <p className="text-xl font-black text-red-800 mt-2">{feedbackMetrics.unhappy}</p>
-              <p className="text-xs font-bold text-red-700">Unhappy ({feedbackMetrics.unhappyPct}%)</p>
+              <p className="text-xl font-black text-rose-400 mt-2">{feedbackMetrics.unhappy}</p>
+              <p className="text-xs font-bold text-rose-300">Unhappy ({feedbackMetrics.unhappyPct}%)</p>
             </div>
           </div>
 
           {/* Feedback logs */}
           <div className="space-y-3">
-            <h4 className="text-sm font-black text-slate-800">Student Remarks ({feedbacks.length})</h4>
+            <h4 className="text-sm font-black text-white">Student Remarks ({feedbacks.length})</h4>
             {feedbacks.length === 0 ? (
-              <p className="text-xs text-slate-400">No ratings submitted for today's meal yet.</p>
+              <p className="text-xs text-slate-400">No ratings submitted for today&apos;s meal yet.</p>
             ) : (
               feedbacks.map((f) => (
-                <div key={f.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5 flex items-center justify-between text-xs">
+                <div key={f.id} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-3.5 flex items-center justify-between text-xs">
                   <div>
-                    <span className="font-black text-slate-800">{f.vid}</span> • <span className="font-semibold">{f.mealType}</span>
+                    <span className="font-bold text-white">{f.vid}</span> • <span className="font-semibold text-slate-400">{f.mealType}</span>
                     {f.complaintTags && f.complaintTags.length > 0 && (
-                      <span className="ml-2 text-rose-600 font-bold">[{f.complaintTags.join(", ")}]</span>
+                      <span className="ml-2 text-rose-400 font-bold">[{f.complaintTags.join(", ")}]</span>
                     )}
-                    {f.comments && <p className="text-slate-600 mt-1 italic">"{f.comments}"</p>}
+                    {f.comments && <p className="text-slate-300 mt-1 italic">&ldquo;{f.comments}&rdquo;</p>}
                   </div>
                   <span className="text-lg">
                     {f.rating === "LOVED" ? "😋" : f.rating === "AVERAGE" ? "😐" : "😡"}
@@ -980,46 +1219,46 @@ export default function KitchenPortal() {
         </div>
       )}
 
-      {/* ── TAB 6: Plate Waste & Green Coins ────────────────────────────── */}
+      {/* ── TAB 7: Plate Waste & Green Coins ────────────────────────────── */}
       {activeTab === "plate_waste" && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-6 animate-fade-in">
+        <div className="card-glass space-y-6 animate-fade-in">
           <div>
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-600">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-400">
               <Leaf className="h-4 w-4" />
               Sustainability Ledger
             </div>
-            <h3 className="text-lg font-black text-slate-900 mt-1">Plate Scanner Waste Audit</h3>
-            <p className="text-xs text-slate-500">
+            <h3 className="text-base font-black text-white mt-1">Plate Scanner Waste Audit</h3>
+            <p className="text-xs text-slate-400">
               Students scanning clean plates earn +20 Green Coins; leftover waste incurs -15 Green Coins
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
               <p className="text-xs text-slate-400 font-bold uppercase">Total Plates Scanned</p>
-              <p className="text-2xl font-black text-slate-800 mt-1">{plateStats.total}</p>
+              <p className="text-2xl font-black text-white mt-1">{plateStats.total}</p>
             </div>
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-              <p className="text-xs text-emerald-600 font-bold uppercase">Clean Plates (Zero Waste)</p>
-              <p className="text-2xl font-black text-emerald-800 mt-1">{plateStats.clean}</p>
-              <p className="text-xs text-emerald-700 mt-0.5">+{plateStats.coinsAwarded} Coins Awarded 🌿</p>
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5">
+              <p className="text-xs text-emerald-400 font-bold uppercase">Clean Plates (Zero Waste)</p>
+              <p className="text-2xl font-black text-emerald-400 mt-1">{plateStats.clean}</p>
+              <p className="text-xs text-emerald-300 mt-0.5">+{plateStats.coinsAwarded} Coins Awarded 🌿</p>
             </div>
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5">
-              <p className="text-xs text-rose-600 font-bold uppercase">Food Wasted</p>
-              <p className="text-2xl font-black text-rose-800 mt-1">{plateStats.wasted}</p>
-              <p className="text-xs text-rose-700 mt-0.5">-{plateStats.coinsDeducted} Coins Penalized ⚠️</p>
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5">
+              <p className="text-xs text-rose-400 font-bold uppercase">Food Wasted</p>
+              <p className="text-2xl font-black text-rose-400 mt-1">{plateStats.wasted}</p>
+              <p className="text-xs text-rose-300 mt-0.5">-{plateStats.coinsDeducted} Coins Penalized ⚠️</p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <h4 className="text-sm font-black text-slate-800">Recent Disposal Counter Scans</h4>
+            <h4 className="text-sm font-black text-white">Recent Disposal Counter Scans</h4>
             {plateLogs.length === 0 ? (
               <p className="text-xs text-slate-400">No plate scans logged today yet.</p>
             ) : (
               plateLogs.slice(0, 10).map((log) => (
-                <div key={log.id} className="flex items-center justify-between rounded-xl border border-slate-100 p-3 text-xs bg-slate-50">
-                  <span className="font-bold text-slate-800">{log.vid}</span>
-                  <span className={`font-black ${log.isCleanPlate ? "text-emerald-600" : "text-rose-600"}`}>
+                <div key={log.id} className="flex items-center justify-between rounded-xl border border-slate-800 p-3 text-xs bg-slate-900/60">
+                  <span className="font-bold text-white">{log.vid}</span>
+                  <span className={`font-bold ${log.isCleanPlate ? "text-emerald-400" : "text-rose-400"}`}>
                     {log.isCleanPlate ? "✅ Clean Plate (+20 pts)" : `⚠️ Food Wasted (${log.wastePercentage}%) -15 pts`}
                   </span>
                 </div>

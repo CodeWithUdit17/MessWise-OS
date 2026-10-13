@@ -2,17 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
 
 @layer base {
   body {
-    @apply font-sans antialiased bg-slate-50 text-slate-900;
+    @apply font-sans antialiased bg-slate-900 text-slate-100 selection:bg-brand-500 selection:text-white;
   }
 }
 
 @layer components {
+  /* Command Center Glass & Card Utilities */
   .card {
+    @apply rounded-2xl border border-slate-700/60 bg-slate-800/80 p-6 shadow-xl backdrop-blur-md transition-all duration-200 hover:border-slate-600;
+  }
+
+  .card-light {
     @apply rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md;
+  }
+
+  .card-glass {
+    @apply rounded-2xl border border-white/10 bg-slate-800/40 p-6 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:border-brand-500/30 hover:bg-slate-800/60;
   }
 
   .card-header {
@@ -20,106 +29,123 @@
   }
 
   .card-title {
-    @apply text-lg font-bold text-slate-900 flex items-center gap-2;
+    @apply text-base font-bold text-slate-100 flex items-center gap-2 tracking-tight;
   }
 
   .card-subtitle {
-    @apply text-xs font-medium text-slate-500;
+    @apply text-xs font-medium text-slate-400;
   }
 
+  /* Badge System */
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold;
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wide;
   }
 
   .badge-green {
-    @apply bg-emerald-100 text-emerald-800;
+    @apply bg-emerald-500/15 text-emerald-400 border border-emerald-500/30;
   }
 
   .badge-amber {
-    @apply bg-amber-100 text-amber-800;
+    @apply bg-amber-500/15 text-amber-300 border border-amber-500/30;
   }
 
   .badge-red {
-    @apply bg-red-100 text-red-800;
+    @apply bg-rose-500/15 text-rose-300 border border-rose-500/30;
   }
 
   .badge-blue {
-    @apply bg-blue-100 text-blue-800;
+    @apply bg-blue-500/15 text-blue-300 border border-blue-500/30;
   }
 
   .badge-purple {
-    @apply bg-purple-100 text-purple-800;
+    @apply bg-purple-500/15 text-purple-300 border border-purple-500/30;
   }
 
+  /* Input Controls */
   .input-field {
-    @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium
-           outline-none transition-colors placeholder:text-slate-400
-           focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20;
+    @apply w-full rounded-xl border border-slate-700 bg-slate-800/90 px-4 py-2.5 text-sm font-medium text-slate-100
+           outline-none transition-all placeholder:text-slate-500
+           focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30;
   }
 
+  /* Buttons */
   .btn-primary {
-    @apply rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-bold text-white
-           shadow-sm transition-all hover:bg-brand-700 hover:shadow-md
-           disabled:cursor-not-allowed disabled:opacity-50;
+    @apply rounded-xl bg-gradient-to-r from-brand-500 to-emerald-600 px-5 py-2.5 text-sm font-bold text-white
+           shadow-lg shadow-brand-500/20 transition-all duration-200 hover:from-brand-600 hover:to-emerald-700 hover:shadow-brand-500/30 hover:-translate-y-0.5
+           active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0;
   }
 
   .btn-secondary {
-    @apply rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-bold text-slate-700
-           shadow-sm transition-all hover:bg-slate-50 hover:border-slate-400
+    @apply rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2 text-sm font-semibold text-slate-200
+           shadow-sm transition-all duration-200 hover:bg-slate-700 hover:border-slate-600 hover:text-white
            disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-danger {
-    @apply rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white
-           shadow-sm transition-all hover:bg-red-700
+    @apply rounded-xl bg-gradient-to-r from-rose-600 to-red-600 px-5 py-2.5 text-sm font-bold text-white
+           shadow-lg shadow-rose-600/25 transition-all duration-200 hover:from-rose-700 hover:to-red-700
            disabled:cursor-not-allowed disabled:opacity-50;
   }
 
+  /* Stats Display */
   .stat-card {
-    @apply rounded-2xl border border-slate-200 bg-white p-5 shadow-sm;
+    @apply rounded-2xl border border-slate-700/60 bg-slate-800/70 p-5 shadow-lg backdrop-blur-sm transition-all duration-200 hover:border-slate-600;
   }
 
   .stat-value {
-    @apply text-2xl font-black text-slate-900;
+    @apply text-2xl font-black text-white tracking-tight;
   }
 
   .stat-label {
-    @apply text-xs font-semibold text-slate-500 flex items-center gap-1.5;
+    @apply text-xs font-semibold text-slate-400 flex items-center gap-1.5 mt-1;
   }
 
+  /* Tables */
   .table-header {
-    @apply text-left text-[11px] font-bold uppercase tracking-wider text-slate-500 px-4 py-3;
+    @apply text-left text-[11px] font-bold uppercase tracking-wider text-slate-400 px-4 py-3 bg-slate-800/50 border-b border-slate-700;
   }
 
   .table-cell {
-    @apply px-4 py-3 text-sm text-slate-700;
+    @apply px-4 py-3 text-sm text-slate-300 border-b border-slate-800/80;
   }
 
+  /* Toasts */
   .toast {
-    @apply fixed top-6 right-6 z-50 flex items-center gap-3 rounded-xl border px-5 py-3
-           text-sm font-semibold shadow-lg animate-slide-up;
+    @apply fixed top-6 right-6 z-50 flex items-center gap-3 rounded-2xl border px-5 py-3.5
+           text-sm font-semibold shadow-2xl backdrop-blur-xl animate-slide-up;
   }
 
   .toast-success {
-    @apply border-emerald-200 bg-emerald-50 text-emerald-900;
+    @apply border-emerald-500/30 bg-emerald-950/90 text-emerald-200;
   }
 
   .toast-error {
-    @apply border-red-200 bg-red-50 text-red-900;
+    @apply border-rose-500/30 bg-rose-950/90 text-rose-200;
   }
 }
 
-/* Custom scrollbar */
+/* Custom glow utility */
+.glow-brand {
+  box-shadow: 0 0 35px -5px rgba(16, 185, 129, 0.35);
+}
+
+.glow-crimson {
+  box-shadow: 0 0 35px -5px rgba(244, 63, 94, 0.4);
+}
+
+/* Custom sleek scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(15, 23, 42, 0.6);
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 rounded-full;
+  background: rgba(100, 116, 139, 0.5);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-400;
+  background: rgba(148, 163, 184, 0.8);
 }
+

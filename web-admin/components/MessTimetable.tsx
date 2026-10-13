@@ -358,29 +358,29 @@ export default function MessTimetable({
       )}
 
       {/* Header & Generator Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl border border-slate-200/80 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent p-6 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl border border-slate-800 bg-gradient-to-r from-amber-500/15 via-slate-900 to-slate-900 p-6 shadow-xl">
         <div>
-          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-700">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-400">
             <Calendar className="h-4 w-4" />
             Official Hostel Mess Schedule
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+          <h2 className="text-xl sm:text-2xl font-black text-white mt-1">
             Weekly Food Timetable
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
             Synchronized with Student Android App & Kitchen Prep Stations
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 border border-emerald-200 px-3.5 py-2.5 text-xs font-black text-emerald-800 shadow-sm">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="flex items-center gap-2 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 px-3.5 py-2.5 text-xs font-black text-emerald-400 shadow-sm">
+            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
             🌱 100% Pure Vegetarian
           </div>
           <button
             onClick={generateRandomTimetable}
             disabled={isGenerating}
-            className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-amber-500/25 transition hover:shadow-amber-500/40 hover:brightness-105 active:scale-95 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/25 transition hover:shadow-amber-500/40 hover:brightness-105 active:scale-95 disabled:opacity-50 font-black"
           >
             {isGenerating ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -405,8 +405,8 @@ export default function MessTimetable({
               onClick={() => setSelectedDayOffset(dayItem.offset)}
               className={`flex-1 min-w-[110px] rounded-2xl p-3.5 text-center transition-all duration-200 border ${
                 isSelected
-                  ? "border-amber-500 bg-amber-500 text-white shadow-md shadow-amber-500/25 scale-[1.02]"
-                  : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
+                  ? "border-amber-400 bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25 scale-[1.02] font-black"
+                  : "border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-300"
               }`}
             >
               <div className="flex items-center justify-center gap-1.5">
@@ -417,8 +417,8 @@ export default function MessTimetable({
                   <span
                     className={`rounded-full px-1.5 py-0.2 text-[9px] font-black ${
                       isSelected
-                        ? "bg-white/25 text-white"
-                        : "bg-emerald-100 text-emerald-700"
+                        ? "bg-slate-950/20 text-slate-950"
+                        : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                     }`}
                   >
                     TODAY
@@ -427,14 +427,14 @@ export default function MessTimetable({
               </div>
               <p
                 className={`text-sm font-black mt-1 ${
-                  isSelected ? "text-white" : "text-slate-900"
+                  isSelected ? "text-slate-950" : "text-white"
                 }`}
               >
                 {dayItem.day}
               </p>
               <p
                 className={`text-[11px] mt-0.5 ${
-                  isSelected ? "text-amber-100" : "text-slate-400"
+                  isSelected ? "text-amber-950 font-bold" : "text-slate-400"
                 }`}
               >
                 {dateStr}
@@ -443,13 +443,13 @@ export default function MessTimetable({
                 {hasData ? (
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${
-                      isSelected ? "bg-white" : "bg-emerald-500"
+                      isSelected ? "bg-slate-950" : "bg-emerald-400"
                     }`}
                   />
                 ) : (
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${
-                      isSelected ? "bg-white/40" : "bg-slate-300"
+                      isSelected ? "bg-slate-950/40" : "bg-slate-700"
                     }`}
                   />
                 )}
@@ -472,35 +472,35 @@ export default function MessTimetable({
           return (
             <div
               key={mealConfig.type}
-              className="flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition"
+              className="flex flex-col justify-between rounded-3xl border border-slate-800 bg-slate-900/80 p-5 shadow-xl hover:border-slate-700 transition"
             >
               <div>
                 {/* Header */}
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div>
                     <span className="text-2xl">{mealConfig.emoji}</span>
-                    <h3 className="text-lg font-black text-slate-900 mt-1">
+                    <h3 className="text-base font-black text-white mt-1">
                       {mealConfig.label}
                     </h3>
                     {isFallback && (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-700 border border-emerald-200 mt-1">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/30 mt-1">
                         🌱 Pure Veg Scheduled
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 rounded-xl bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">
+                  <div className="flex items-center gap-1 rounded-xl bg-slate-800 border border-slate-700 px-2.5 py-1 text-[11px] font-bold text-slate-300">
                     <Clock className="h-3 w-3 text-slate-400" />
                     {mealConfig.time}
                   </div>
                 </div>
 
-                <div className="h-px w-full bg-slate-100 mb-3" />
+                <div className="h-px w-full bg-slate-800 mb-3" />
 
                 {/* Dish Items List */}
                 <div className="space-y-2.5">
                   {items.length === 0 ? (
                     <div className="py-8 text-center">
-                      <Utensils className="mx-auto h-6 w-6 text-slate-300 mb-1" />
+                      <Utensils className="mx-auto h-6 w-6 text-slate-500 mb-1" />
                       <p className="text-xs font-semibold text-slate-400">
                         No menu configured yet
                       </p>
@@ -509,24 +509,24 @@ export default function MessTimetable({
                     items.map((dish, i) => (
                       <div
                         key={i}
-                        className="group rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 transition hover:border-emerald-200 hover:bg-emerald-50/20"
+                        className="group rounded-xl border border-slate-800 bg-slate-950/60 p-2.5 transition hover:border-amber-500/40 hover:bg-slate-850"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-start gap-1.5 min-w-0">
                             {/* FSSAI Standard Indian Pure Veg Green Square & Dot */}
                             <div
-                              className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm border border-emerald-600 bg-white p-0.5 mt-0.5"
+                              className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm border border-emerald-500 bg-slate-900 p-0.5 mt-0.5"
                               title="100% Pure Vegetarian"
                             >
-                              <div className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                              <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                             </div>
-                            <p className="text-xs font-bold text-slate-800 leading-snug">
+                            <p className="text-xs font-bold text-slate-200 leading-snug">
                               {dish.name}
                             </p>
                           </div>
                           {dish.calories > 0 && (
-                            <span className="flex items-center gap-0.5 shrink-0 rounded-md bg-amber-100/70 px-1.5 py-0.5 text-[10px] font-black text-amber-800">
-                              <Flame className="h-2.5 w-2.5 text-amber-600" />
+                            <span className="flex items-center gap-0.5 shrink-0 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-500/30">
+                              <Flame className="h-2.5 w-2.5 text-amber-400" />
                               {dish.calories}
                             </span>
                           )}
@@ -541,8 +541,8 @@ export default function MessTimetable({
                                 key={t}
                                 className={`rounded-md px-1.5 py-0.5 text-[9px] border ${
                                   isVeg
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 font-bold"
-                                    : "bg-white text-slate-600 border-slate-200 font-semibold"
+                                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 font-bold"
+                                    : "bg-slate-800 text-slate-300 border-slate-700 font-semibold"
                                 }`}
                               >
                                 {isVeg && !t.includes("🌱") ? `🌱 ${t}` : t}
@@ -552,7 +552,7 @@ export default function MessTimetable({
                           {dish.allergens?.map((a) => (
                             <span
                               key={a}
-                              className="rounded-md bg-red-50 px-1.5 py-0.5 text-[9px] font-semibold text-red-600 border border-red-100"
+                              className="rounded-md bg-rose-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-rose-300 border border-rose-500/30"
                             >
                               ⚠️ {a}
                             </span>
@@ -568,11 +568,11 @@ export default function MessTimetable({
               {onSelectMealForEdit && (
                 <button
                   onClick={() => onSelectMealForEdit(selectedDate, mealConfig.type)}
-                  className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-amber-50 hover:text-amber-800 hover:border-amber-300"
+                  className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 py-2.5 text-xs font-bold text-slate-300 transition hover:bg-slate-700 hover:text-white"
                 >
-                  <ChefHat className="h-3.5 w-3.5" />
-                  Edit in Live Editor
-                  <ChevronRight className="h-3.5 w-3.5" />
+                  <ChefHat className="h-3.5 w-3.5 text-amber-400" />
+                  <span>Edit in Live Editor</span>
+                  <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
                 </button>
               )}
             </div>
