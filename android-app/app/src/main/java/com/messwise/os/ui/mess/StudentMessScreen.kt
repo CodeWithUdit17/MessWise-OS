@@ -73,13 +73,18 @@ fun StudentMessScreen(
                                 )
                             )
                             Spacer(modifier = Modifier.width(6.dp))
+                            val isDark = androidx.compose.foundation.isSystemInDarkTheme()
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = Color(0xFFD1FAE5)
+                                color = if (isDark) Color(0xFF064E3B).copy(alpha = 0.5f) else Color(0xFFD1FAE5),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (isDark) Color(0xFF10B981).copy(alpha = 0.35f) else Color.Transparent
+                                )
                             ) {
                                 Text(
                                     "🌱 100% PURE VEG",
-                                    color = Color(0xFF065F46),
+                                    color = if (isDark) Color(0xFF6EE7B7) else Color(0xFF065F46),
                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
@@ -256,10 +261,15 @@ fun StudentMessScreen(
                                     MealType.SNACKS -> "Cutoff: 1:00 PM (Serves 4:00 PM)"
                                     MealType.DINNER -> "Cutoff: 4:00 PM (Serves 7:00 PM)"
                                 }
+                                val isDark = androidx.compose.foundation.isSystemInDarkTheme()
                                 Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = Color(0xFFFEF3C7),
-                                    modifier = Modifier.padding(top = 4.dp)
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isDark) Color(0xFF78350F).copy(alpha = 0.25f) else Color(0xFFFEF3C7),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (isDark) Color(0xFFF59E0B).copy(alpha = 0.35f) else Color(0xFFF59E0B).copy(alpha = 0.2f)
+                                    ),
+                                    modifier = Modifier.padding(top = 6.dp)
                                 ) {
                                     Text(
                                         text = "⏰ $cutoffInfo",
@@ -267,8 +277,8 @@ fun StudentMessScreen(
                                             fontWeight = FontWeight.SemiBold,
                                             fontSize = 10.sp
                                         ),
-                                        color = Color(0xFF92400E),
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        color = if (isDark) Color(0xFFFCD34D) else Color(0xFF92400E),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                     )
                                 }
                             }
@@ -277,10 +287,22 @@ fun StudentMessScreen(
                             val status = uiState.mealStatuses[uiState.selectedMealType]
                                 ?: AttendanceStatus.ATTENDING
 
+                            val isDark = androidx.compose.foundation.isSystemInDarkTheme()
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = if (status == AttendanceStatus.SKIPPED)
-                                    Color(0xFFFEF3C7) else Color(0xFFD1FAE5),
+                                color = if (status == AttendanceStatus.SKIPPED) {
+                                    if (isDark) Color(0xFF78350F).copy(alpha = 0.35f) else Color(0xFFFEF3C7)
+                                } else {
+                                    if (isDark) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFD1FAE5)
+                                },
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (status == AttendanceStatus.SKIPPED) {
+                                        if (isDark) Color(0xFFF59E0B).copy(alpha = 0.4f) else Color(0xFFF59E0B).copy(alpha = 0.2f)
+                                    } else {
+                                        if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFF10B981).copy(alpha = 0.2f)
+                                    }
+                                ),
                                 modifier = Modifier.padding(start = 8.dp)
                             ) {
                                 Text(
@@ -289,8 +311,11 @@ fun StudentMessScreen(
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = FontWeight.Bold
                                     ),
-                                    color = if (status == AttendanceStatus.SKIPPED)
-                                        Color(0xFF92400E) else Color(0xFF065F46),
+                                    color = if (status == AttendanceStatus.SKIPPED) {
+                                        if (isDark) Color(0xFFFCD34D) else Color(0xFF92400E)
+                                    } else {
+                                        if (isDark) Color(0xFF6EE7B7) else Color(0xFF065F46)
+                                    },
                                     modifier = Modifier.padding(
                                         horizontal = 12.dp,
                                         vertical = 6.dp
@@ -401,7 +426,7 @@ private fun QuickActionsHub(
                         title = "Plate Scanner",
                         subtitle = "± Green Coins",
                         onClick = onPlateScanner,
-                        bgColor = Color(0xFFECFDF5)
+                        accentColor = Color(0xFF10B981)
                     )
                 }
                 item {
@@ -410,7 +435,7 @@ private fun QuickActionsHub(
                         title = "QR Entry Pass",
                         subtitle = "Gate Verification",
                         onClick = onEntryQr,
-                        bgColor = Color(0xFFEFF6FF)
+                        accentColor = Color(0xFF3B82F6)
                     )
                 }
                 item {
@@ -419,7 +444,7 @@ private fun QuickActionsHub(
                         title = "Sick Meal",
                         subtitle = "Khichdi & Care",
                         onClick = onSickMeal,
-                        bgColor = Color(0xFFFFF1F2)
+                        accentColor = Color(0xFFF43F5E)
                     )
                 }
                 item {
@@ -428,7 +453,7 @@ private fun QuickActionsHub(
                         title = "Special Lunch",
                         subtitle = "Feast Booking",
                         onClick = onSpecialLunch,
-                        bgColor = Color(0xFFFFFBEB)
+                        accentColor = Color(0xFFF59E0B)
                     )
                 }
                 item {
@@ -437,7 +462,7 @@ private fun QuickActionsHub(
                         title = "Holiday Leave",
                         subtitle = "1-Day Advance",
                         onClick = onHolidayRebate,
-                        bgColor = Color(0xFFF0FDF4)
+                        accentColor = Color(0xFF14B8A6)
                     )
                 }
                 item {
@@ -446,7 +471,7 @@ private fun QuickActionsHub(
                         title = "IT Support",
                         subtitle = "Tech Complaint",
                         onClick = onTechComplaint,
-                        bgColor = Color(0xFFF8FAFC)
+                        accentColor = Color(0xFF8B5CF6)
                     )
                 }
             }
@@ -460,28 +485,47 @@ private fun ActionChipItem(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
-    bgColor: Color
+    accentColor: Color
 ) {
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     Surface(
         modifier = Modifier
-            .width(130.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .width(136.dp)
+            .clip(RoundedCornerShape(18.dp))
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        color = bgColor
+        shape = RoundedCornerShape(18.dp),
+        color = if (isDark) accentColor.copy(alpha = 0.12f) else accentColor.copy(alpha = 0.12f),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (isDark) accentColor.copy(alpha = 0.35f) else accentColor.copy(alpha = 0.25f)
+        )
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(icon, fontSize = 24.sp)
-            Spacer(modifier = Modifier.height(8.dp))
+        Column(modifier = Modifier.padding(14.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isDark) accentColor.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.9f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(icon, fontSize = 20.sp)
+            }
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
                 title,
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black),
-                color = Color(0xFF0F172A)
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                ),
+                color = if (isDark) Color.White else Color(0xFF0F172A)
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 subtitle,
-                style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF64748B)
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 10.sp
+                ),
+                color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
             )
         }
     }
@@ -623,26 +667,45 @@ private fun MealTypeTabs(
     selectedMealType: MealType,
     onSelect: (MealType) -> Unit
 ) {
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         items(MealType.entries.toList()) { mealType ->
             val isSelected = mealType == selectedMealType
-            FilterChip(
-                selected = isSelected,
-                onClick = { onSelect(mealType) },
-                label = {
-                    Text(
-                        text = "${mealType.emoji} ${mealType.displayName}",
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                    )
+            Surface(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable { onSelect(mealType) },
+                shape = RoundedCornerShape(16.dp),
+                color = if (isSelected) {
+                    if (isDark) Color(0xFF059669) else Color(0xFF10B981)
+                } else {
+                    if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    else MaterialTheme.colorScheme.surface
                 },
-                shape = RoundedCornerShape(14.dp),
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (isSelected) Color.Transparent
+                    else MaterialTheme.colorScheme.outline.copy(alpha = if (isDark) 0.25f else 0.15f)
+                ),
+                shadowElevation = if (isSelected) 3.dp else 0.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(text = mealType.emoji, fontSize = 16.sp)
+                    Text(
+                        text = mealType.displayName,
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                        ),
+                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
         }
     }
 }
@@ -686,72 +749,90 @@ private fun SkipEatToggleSection(
                 modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
             )
 
+            val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+
             MealType.entries.forEach { mealType ->
                 val status = mealStatuses[mealType] ?: AttendanceStatus.ATTENDING
                 val isSkipping = status == AttendanceStatus.SKIPPED
 
-                Row(
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            if (isSkipping) Color(0xFFFEF3C7).copy(alpha = 0.7f)
-                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                        )
-                        .clickable { onToggle(mealType) }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = mealType.emoji,
-                            fontSize = 20.sp
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = mealType.displayName,
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            )
-                            val cutoffInfo = when (mealType) {
-                                MealType.BREAKFAST -> "Cutoff 4:00 AM"
-                                MealType.LUNCH -> "Cutoff 9:00 AM"
-                                MealType.SNACKS -> "Cutoff 1:00 PM"
-                                MealType.DINNER -> "Cutoff 4:00 PM"
-                            }
-                            Text(
-                                text = "⏰ $cutoffInfo (+15 Pts)",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable { onToggle(mealType) },
+                    shape = RoundedCornerShape(16.dp),
+                    color = if (isSkipping) {
+                        if (isDark) Color(0xFF78350F).copy(alpha = 0.22f) else Color(0xFFFEF3C7).copy(alpha = 0.85f)
+                    } else {
+                        if (isDark) Color(0xFF064E3B).copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    },
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (isSkipping) {
+                            if (isDark) Color(0xFFF59E0B).copy(alpha = 0.4f) else Color(0xFFF59E0B).copy(alpha = 0.35f)
+                        } else {
+                            if (isDark) Color(0xFF10B981).copy(alpha = 0.3f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
                         }
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (isSkipping) Color(0xFFD97706) else MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                if (isSkipping) Icons.Default.Close else Icons.Default.Check,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = if (isSkipping) "Skipping" else "Eating",
-                                color = Color.White,
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.Bold
-                                )
+                                text = mealType.emoji,
+                                fontSize = 22.sp
                             )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = mealType.displayName,
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                val cutoffInfo = when (mealType) {
+                                    MealType.BREAKFAST -> "Cutoff 4:00 AM"
+                                    MealType.LUNCH -> "Cutoff 9:00 AM"
+                                    MealType.SNACKS -> "Cutoff 1:00 PM"
+                                    MealType.DINNER -> "Cutoff 4:00 PM"
+                                }
+                                Text(
+                                    text = "⏰ $cutoffInfo (+15 Pts)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSkipping) Color(0xFFD97706) else Color(0xFF10B981)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    if (isSkipping) Icons.Default.Close else Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isSkipping) "Skipping" else "Eating",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+                            }
                         }
                     }
                 }

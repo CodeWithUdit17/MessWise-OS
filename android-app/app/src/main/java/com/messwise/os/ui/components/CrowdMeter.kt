@@ -33,18 +33,32 @@ fun CrowdMeter(
     crowdMetrics: CrowdMetrics,
     modifier: Modifier = Modifier
 ) {
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+
     val (bgGradient, textColor, badgeColor) = when (crowdMetrics.currentLevel) {
-        CrowdLevel.LOW -> Triple(
+        CrowdLevel.LOW -> if (isDark) Triple(
+            listOf(Color(0xFF064E3B), Color(0xFF022C22)),
+            Color(0xFF6EE7B7),
+            Color(0xFF10B981)
+        ) else Triple(
             listOf(Color(0xFFD1FAE5), Color(0xFFA7F3D0)),
             Color(0xFF065F46),
             Color(0xFF10B981)
         )
-        CrowdLevel.MODERATE -> Triple(
+        CrowdLevel.MODERATE -> if (isDark) Triple(
+            listOf(Color(0xFF78350F), Color(0xFF451A03)),
+            Color(0xFFFCD34D),
+            Color(0xFFF59E0B)
+        ) else Triple(
             listOf(Color(0xFFFEF3C7), Color(0xFFFDE68A)),
             Color(0xFF92400E),
             Color(0xFFF59E0B)
         )
-        CrowdLevel.PEAK -> Triple(
+        CrowdLevel.PEAK -> if (isDark) Triple(
+            listOf(Color(0xFF7F1D1D), Color(0xFF450A0A)),
+            Color(0xFFFCA5A5),
+            Color(0xFFEF4444)
+        ) else Triple(
             listOf(Color(0xFFFEE2E2), Color(0xFFFECACA)),
             Color(0xFF991B1B),
             Color(0xFFEF4444)
@@ -55,7 +69,7 @@ fun CrowdMeter(
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = 1.3f,
+        targetValue = 1.35f,
         animationSpec = infiniteRepeatable(
             animation = tween(1000, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse
@@ -142,7 +156,11 @@ fun CrowdMeter(
                     // Wait time badge
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color.White.copy(alpha = 0.8f)
+                        color = if (isDark) Color.Black.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.85f),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            textColor.copy(alpha = 0.2f)
+                        )
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -172,6 +190,35 @@ fun CrowdMeter(
                                 )
                             }
                         }
+                    }
+                }
+
+                // 3-Segment Visual Rush Gauge
+                Spacer(modifier = Modifier.height(14.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val activeSegments = when (crowdMetrics.currentLevel) {
+                        CrowdLevel.LOW -> 1
+                        CrowdLevel.MODERATE -> 2
+                        CrowdLevel.PEAK -> 3
+                    }
+                    val segmentColor = when (crowdMetrics.currentLevel) {
+                        CrowdLevel.LOW -> Color(0xFF10B981)
+                        CrowdLevel.MODERATE -> Color(0xFFF59E0B)
+                        CrowdLevel.PEAK -> Color(0xFFEF4444)
+                    }
+                    for (i in 1..3) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(
+                                    if (i <= activeSegments) segmentColor else textColor.copy(alpha = 0.15f)
+                                )
+                        )
                     }
                 }
 
